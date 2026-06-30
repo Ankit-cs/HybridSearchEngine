@@ -1,8 +1,8 @@
 # 🚀 AstraSearch: AI-Powered Hybrid Search & Agentic RAG
 
-AstraSearch is a state-of-the-art hybrid search engine built to eliminate context loss of traditional keyword-based retrieval. By merging exact-match keyword hits (BM25) with deep contextual similarity (Sentence-BERT vector embeddings), AstraSearch ensures maximum retrieval precision. 
+AstraSearch is a production-inspired, Python-native hybrid search engine and Retrieval-Augmented Generation (RAG) system. Designed to eliminate context loss in traditional retrieval pipelines, it bridges the gap between classical Information Retrieval (IR) and Generative AI. 
 
-Furthermore, the system implements a **stateful agentic RAG pipeline** using **LangGraph**, deploying asynchronous AI agents to analyze query intent, expand queries semantically, and synthesize final retrieved documents into coherent, cited answers.
+By fusing exact-match keyword search (BM25) with deep contextual vector space representations (Sentence-Transformers), AstraSearch yields superior retrieval precision. The engine employs stateful agentic orchestration via **LangGraph**, utilizing asynchronous LLM-agents to handle query intent classification, query expansion, and synthesize retrieved context into coherent, fully cited answers.
 
 ---
 
