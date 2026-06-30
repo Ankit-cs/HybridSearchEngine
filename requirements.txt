@@ -1,0 +1,9 @@
+   fastapi>=0.95.0
+   uvicorn>=0.22.0
+   pydantic>=2.0
+   lxml>=4.9.0
+   mwparserfromhell>=0.6.0
+   sentence-transformers>=2.2.0
+   numpy>=1.20.0
+   scikit-learn>=1.0.0
+   pytest>=7.0.0
