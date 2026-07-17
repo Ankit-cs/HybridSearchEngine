@@ -1,50 +1,5 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Environments
-.env
-.venv
 venv/
-ENV/
-env/
-
-# Python packaging & builds
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Unit testing & coverage
-.pytest_cache/
-.mypy_cache/
-htmlcov/
-.coverage
-.coverage.*
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-
-# Project-specific search indices and large raw data files
-data/raw/
-data/index/
+__pycache__/
+*.pyc
+data/
 logs/
-*.log
