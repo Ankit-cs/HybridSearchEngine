@@ -35,6 +35,18 @@ It combines classical information retrieval (BM25) with modern semantic search u
 - Modular architecture (parser → index → ranking → API)
 - Separate document store and index
 - Metadata-driven ranking
+- Singleton embedding model (prevents double-loading in memory)
+
+### 🏎️ Enterprise-Grade Storage (AI-Lakehouse Inspired)
+- **FAISS Vector Indexing** — blazing-fast similarity search via `IndexFlatIP`
+- **Memory-Mapped Loading** (`faiss.IO_FLAG_MMAP`) — vectors stream from disk, RAM usage stays near zero
+- **Apache Parquet Document Store** — columnar, compressed document storage via `pandas` / `pyarrow`
+- **ID Mapping Layer** — FAISS IDs are transparently mapped back to Wikipedia doc IDs
+
+### 🇮🇳 India-Specific Domain Filter
+- Automatically filters all 240k+ Wikipedia articles during indexing
+- Extracts only articles related to Indian history, culture, geography, politics, and leaders
+- Keywords include: Bharat, Mughal, Chola, Maratha, Ashoka, Gandhi, Modi, ISRO, Bollywood, Vedic, Sanskrit, and 30+ more
 
 ### 🌐 API + UI
 - FastAPI backend
@@ -60,9 +72,9 @@ Inverted Index + Title Index
 ↓
 Metadata (doc lengths, stats)
 ↓
-Embedding Generation
+Embedding Generation (Singleton Model)
 ↓
-Storage (JSON)
+FAISS Index + Parquet Storage
 
 
 ONLINE (Search)
@@ -154,11 +166,12 @@ python -m scripts.build_index --source data/raw/simplewiki.xml
 This generates:
 ```bash
 data/index/
-├── inverted_index.json
-├── title_index.json
-├── documents.json
-├── metadata.json
-├── embeddings.json
+├── inverted_index.json     # BM25 keyword index
+├── title_index.json        # Title-boosted keyword index
+├── documents.parquet       # Compressed columnar document store (Parquet)
+├── metadata.json           # Doc lengths & corpus stats
+├── embeddings.index        # FAISS binary vector index (mmap-ready)
+└── faiss_id_map.json       # Mapping: FAISS sequential ID → Wikipedia doc_id
 ```
 
 ### 5. Searching
@@ -182,13 +195,17 @@ all paths and constants are centralized in:
 
 ## Key Concepts Implemented
 
-Inverted Index
-BM25 Ranking
-Semantic Embeddings
-Cosine Similarity
-Hybrid Score Fusion
-Query Expansion
-Offline vs Online computation
+- Inverted Index (BM25 + TF-IDF)
+- Title-Aware Ranking with configurable boost factor
+- Semantic Embeddings (`all-MiniLM-L6-v2` via SentenceTransformers)
+- Cosine Similarity & Hybrid Score Fusion
+- Semantic Query Expansion
+- Offline vs Online computation split
+- **FAISS Vector Indexing** (Inner Product similarity)
+- **Memory-Mapped Index Loading** (near-zero RAM overhead)
+- **Apache Parquet Storage** (compressed columnar documents)
+- **Singleton Embedding Model** (prevents OOM on startup)
+- **India Domain Filter** (custom keyword-based corpus filtration)
 
 
 logs are written to: 
