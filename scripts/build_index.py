@@ -93,7 +93,8 @@ def main():
             logger.info(f"Generated embeddings for {total_docs} docs")
 
         if total_docs % 1000 == 0:
-            logger.info(f"Indexed {total_docs} documents")
+            logger.info("Stopping early at 1000 documents for fast testing.")
+            break
 
         doc_len = len(tokens)
         doc_lengths[doc_id] = doc_len
