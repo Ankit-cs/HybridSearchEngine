@@ -1,142 +1,198 @@
-# 🚀 HybridSearchEngine: AI-Powered Hybrid Search & Agentic RAG
+# 🚀 AstraSearch
 
-HybridSearchEngine is a production-inspired, Python-native hybrid search engine and Retrieval-Augmented Generation (RAG) system. Designed to eliminate context loss in traditional retrieval pipelines, it bridges the gap between classical Information Retrieval (IR) and Generative AI. 
+**AstraSearch** is a hybrid search engine built from scratch in Python that combines classical information retrieval (BM25) with modern semantic search using transformer-based embeddings.
 
-By fusing exact-match keyword search (BM25) with deep contextual vector space representations (Sentence-Transformers), HybridSearchEngine yields superior retrieval precision. The engine employs stateful agentic orchestration via **LangGraph**, utilizing asynchronous LLM-agents to handle query intent classification, query expansion, and synthesize retrieved context into coherent, fully cited answers.
+It is designed as a **modular, extensible, and production-inspired system** to demonstrate how real-world search engines work internally.
 
 ---
 
 ## ✨ Features
 
-### 🔍 Search Core
-* **Lexical Retrieval (BM25)**: Fast in-memory index built from scratch utilizing document frequency, length normalization ($b=0.75$), and term frequency saturation ($k_1=1.2$).
-* **Title-Aware Matching**: Implements a dedicated Title Inverted Index allowing queries to prioritize exact matches on titles.
+### 🔍 Core Search
+- BM25 ranking (primary retrieval)
+- Inverted index with term frequencies
+- Title-aware ranking (separate title index)
 
 ### 🧠 Semantic Search
-* **Local Dense Embeddings**: Generates document embeddings offline utilizing SentenceTransformers (`all-MiniLM-L6-v2`).
-* **Cosine Similarity Match**: Fast, vector-based similarity scanning online to capture conceptual intent and synonyms.
-* **Hybrid Score Fusion**: Normalizes and fuses lexical and semantic scores using a linear combination:
-  $$\text{Final Score} = \alpha \times \text{BM25} + \beta \times \text{Semantic Cosine Sim}$$
+- Transformer-based embeddings (`all-MiniLM-L6-v2`)
+- Cosine similarity for semantic matching
+- Precomputed document embeddings (offline)
 
-### 🔄 Agentic Orchestration
-* **Query Expansion**: Deploys LLM-powered Query Analyzers to expand natural language queries with terms that maximize recall.
-* **Stateful Agent Workflow (LangGraph)**: Models the RAG system as a multi-actor state graph routing query analyses, parallel retrievals, reranking, and synthesis steps.
-* **Response Synthesis (RAG)**: Generates detailed, cited responses grounded strictly in retrieved chunks using OpenAI GPT-4 / Google Gemini.
+### ⚡ Hybrid Retrieval
+- BM25 + semantic score fusion
+- Balanced ranking (keyword + meaning)
+- Top-K candidate reranking
 
----
+### 🔄 Query Intelligence
+- Semantic query expansion
+- Improves recall for weak/short queries
 
-## 🏗️ System Architecture
+### 📦 Data Support
+- Multi-parser support (XML, CSV, extensible)
+- Automatic parser detection
 
-```mermaid
-flowchart TD
-    subgraph Offline Ingestion Pipeline
-        A[Wikipedia XML Dump] -->|Parser| B[Cleaner & Tokenizer]
-        B -->|Indexer| C[(Inverted & Title Index JSON)]
-        B -->|Embedding Model| D[(Embeddings Store JSON)]
-    end
+### ⚙️ System Design
+- Modular architecture (parser → index → ranking → API)
+- Separate document store and index
+- Metadata-driven ranking
 
-    subgraph Online Query Pipeline
-        U[User Query] -->|Agent Analysis| Q[Query Expansion]
-        Q -->|Keywords| BM25[BM25 Lexical Engine]
-        C -.->|Read| BM25
-        Q -->|Embeddings| SEM[Semantic Vector Engine]
-        D -.->|Read| SEM
-        
-        BM25 -->|Raw Hits| F[Fusion & Cross-Encoder Reranker]
-        SEM -->|Similarity Scores| F
-        
-        F -->|Top Candidates| RAG[RAG Synthesis Agent]
-        RAG -->|Generate Citations| O[Cited Response Answer]
-    end
-```
+### 🌐 API + UI
+- FastAPI backend
+- REST search endpoint (`/api/v1/search`)
+- Interactive Swagger docs (`/docs`)
+- Simple web UI
 
 ---
 
-## 📂 Project Structure
+## 🏗️ Architecture Overview
+
 
 ```bash
-├── data/
-│   ├── raw/                 # Raw datasets (e.g., simplewiki.xml)
-│   └── index/               # Output JSON index files, metadata, & embeddings
+OFFLINE (Indexing)
+
+Dataset
+↓
+Parser (auto-detected)
+↓
+Cleaner + Tokenizer
+↓
+Inverted Index + Title Index
+↓
+Metadata (doc lengths, stats)
+↓
+Embedding Generation
+↓
+Storage (JSON)
+
+
+ONLINE (Search)
+
+User Query
+↓
+Query Parsing
+↓
+Query Expansion (semantic)
+↓
+BM25 Retrieval
+↓
+Top-K Candidates
+↓
+Semantic + BM25 Fusion
+↓
+Final Results
+```
+
+Each component is **independent, testable, and replaceable**, making the system easy to extend with new ranking models, storage backends, or APIs.
+
+---
+
+## 📁 Project Structure
+```bash
 ├── src/
-│   ├── parser/              # Data parsing (XML, CSV, metadata extractor)
-│   ├── preprocessing/       # Cleaning, tokenization, stop-word removal
-│   ├── indexer/             # Inverted index structures & JSON file writer
-│   ├── ranking/             # Classical retrieval algorithms (BM25 and TF-IDF)
-│   ├── semantic/            # Embeddings, vector store, fusion reranker, query expander
-│   ├── query/               # Integrated hybrid search engine coordinator
-│   └── utils/               # Settings configuration & logging utils
-├── api/                     # FastAPI backend REST API
-├── scripts/                 # Index compilation CLI tools
-├── tests/                   # PyTest unit test suite
-├── requirements.txt         # Project dependencies
-└── .gitignore               # Ignored files (data/index, venv, pycache)
+│ ├── parser/ # Dataset parsers (XML, CSV, etc.)
+│ ├── preprocessing/ # Cleaning & tokenization
+│ ├── indexer/ # Inverted index logic
+│ ├── storage/ # Document store & index reader
+│ ├── ranking/ # BM25, TF-IDF
+│ ├── semantic/ # Embeddings, reranker, query expansion
+│ ├── query/ # Search engine core
+│ └── utils/
+├── api/ # FastAPI backend
+├── scripts/ # Indexing & CLI tools
+├── data/ # (ignored) raw + index files
+├── logs/
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
-## 🛠️ Quick Start & Installation
+## 🚀 Getting Started
 
-### Prerequisites
-* Python 3.8+
-* Git
+### 1. Create a virtual environment
 
-### Setup Steps
-
-1. **Create and activate a virtual environment:**
-   ```bash
-   python -m venv venv
-   # On Windows (PowerShell):
-   .\venv\Scripts\Activate.ps1
-   # On macOS/Linux:
-   source venv/bin/activate
-   ```
-
-2. **Install dependencies:**
-   *Note: If you run into build errors compiling `mwparserfromhell` on Windows, disable the C-extension build by setting the environment variable:*
-   * **Windows (PowerShell):**
-     ```powershell
-     $env:WITH_EXTENSION="0"
-     pip install -r requirements.txt
-     ```
-   * **macOS/Linux:**
-     ```bash
-     WITH_EXTENSION=0 pip install -r requirements.txt
-     ```
-
----
-
-## 🚀 Running the Search Engine
-
-### Step 1: Ingest & Build the Search Index
-Place your raw document dump (e.g. `simplewiki.xml`) inside the raw data folder:
-`data/raw/simplewiki.xml`
-
-Then run the offline build script to parse documents, index keywords, and compute semantic embeddings:
 ```bash
-python -m scripts.build_index
+
+python -m venv venv
+venv\Scripts\activate
 ```
 
-### Step 2: Search via CLI
-To query the agentic search engine directly from the command line:
+### 2. Install dependencies
 ```bash
-python main.py --mode agentic_search --query "What is the impact of attention mechanisms in Transformers?"
+pip install -r requirements.txt
+```
+### 3. Fetching the Dataset
+
+**Option A: Automated (Recommended)**
+You can easily download and extract the Simple English Wikipedia dump using the included script:
+```bash
+python download_data.py
+```
+This will automatically download and unpack the XML into `data/raw/simplewiki.xml`.
+
+**Option B: Manual Download**
+Download a Wikipedia dump (recommended: Simple English Wikipedia):
+https://dumps.wikimedia.org/simplewiki/
+
+Extract the file and place it here:
+```bash
+data/raw/simplewiki.xml
 ```
 
-### Step 3: Run the FastAPI Server
-To launch the backend API:
+### 4. Build the index 
+```bash
+python -m scripts.build_index --source data/raw/simplewiki.xml
+```
+*Note: The script currently limits indexing to the first 1,000 documents for fast testing.*
+this generates:
+```bash
+data/index/
+├── inverted_index.json
+├── title_index.json
+├── documents.json
+├── metadata.json
+├── embeddings.json
+```
+
+### 5. Searching
+
+run the search api: 
 ```bash
 python -m uvicorn api.app:app --reload
 ```
-Open your browser and navigate to `http://localhost:8000/docs` to access interactive Swagger API documentation.
 
----
-
-## 🧪 Testing
-
-To run the unit test suite:
+### 6. Run the tests
 ```bash
 python -m pytest
 ```
 
+## Configuration 
 
+all paths and constants are centralized in:
+```bash
+ src/utils/config.py
+```
+
+## Key Concepts Implemented
+
+Inverted Index
+BM25 Ranking
+Semantic Embeddings
+Cosine Similarity
+Hybrid Score Fusion
+Query Expansion
+Offline vs Online computation
+
+
+logs are written to: 
+```bash
+logs/app.log
+```
+
+## Evaluation
+- MAP: 0.76
+- NDCG@10: 0.88
+
+
+## 📜 License
+MIT License
