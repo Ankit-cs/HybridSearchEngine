@@ -25,13 +25,7 @@ LOG_FILE = LOG_DIR / "app.log"
 # Wikipedia dump
 SIMPLEWIKI_XML = RAW_DATA_DIR / "simplewiki.xml"
 
-# 🔴 FAIL FAST if missing
-if not SIMPLEWIKI_XML.exists():
-    raise FileNotFoundError(
-        f"simplewiki.xml not found at {SIMPLEWIKI_XML}\n"
-        "Download from https://dumps.wikimedia.org/simplewiki/\n"
-        "and rename it to simplewiki.xml"
-    )
+
 
 # ranker preference
 RANKER = "bm25"  # options: "tfidf", "bm25"
