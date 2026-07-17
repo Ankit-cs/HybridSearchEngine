@@ -13,4 +13,4 @@ uvicorn
 pydantic
 mwparserfromhell
 ailake
-pandas
+pandasgunicorn
