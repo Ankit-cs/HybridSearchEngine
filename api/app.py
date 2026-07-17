@@ -12,6 +12,7 @@ from src.utils.config import (
 )
 
 from api.routes.search import router as search_router
+from api.routes.agentic import router as agentic_router
 
 
 @asynccontextmanager
@@ -63,6 +64,7 @@ app.add_middleware(
 )
 
 app.include_router(search_router)
+app.include_router(agentic_router)
 
 
 @app.get("/health")
