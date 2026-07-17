@@ -1,8 +1,8 @@
-# 🚀 AstraSearch
+# 🚀 AstraSearch (India-Focused Hybrid Search Engine)
 
-**AstraSearch** is a hybrid search engine built from scratch in Python that combines classical information retrieval (BM25) with modern semantic search using transformer-based embeddings.
+**AstraSearch** is a domain-specific hybrid search engine built from scratch in Python. It automatically filters large-scale Wikipedia datasets during indexing to create a specialized search engine focused exclusively on **Indian history, culture, geography, and leaders**.
 
-It is designed as a **modular, extensible, and production-inspired system** to demonstrate how real-world search engines work internally.
+It combines classical information retrieval (BM25) with modern semantic search using transformer-based embeddings, designed as a **modular, extensible, and production-inspired system**.
 
 ---
 
@@ -123,12 +123,18 @@ pip install -r requirements.txt
 ```
 ### 3. Fetching the Dataset
 
-**Option A: Automated (Recommended)**
-You can easily download and extract the Simple English Wikipedia dump using the included script:
+**Option A: Standard Dataset (Recommended for testing)**
+Download the Simple English Wikipedia dump (~240,000 articles):
 ```bash
 python download_data.py
 ```
-This will automatically download and unpack the XML into `data/raw/simplewiki.xml`.
+
+**Option B: Massive Dataset (For production metrics)**
+Download the Full English Wikipedia dump (over 6.8 million articles, ~22GB compressed):
+```bash
+python download_massive_data.py
+```
+*Warning: This requires at least 120GB of free disk space.*
 
 **Option B: Manual Download**
 Download a Wikipedia dump (recommended: Simple English Wikipedia):
@@ -143,8 +149,9 @@ data/raw/simplewiki.xml
 ```bash
 python -m scripts.build_index --source data/raw/simplewiki.xml
 ```
-*Note: The script currently limits indexing to the first 1,000 documents for fast testing.*
-this generates:
+*Note: The indexer includes a custom India-filter. It will scan the entire dataset and selectively extract only articles relating to India, its history, and culture.*
+
+This generates:
 ```bash
 data/index/
 ├── inverted_index.json
@@ -190,8 +197,17 @@ logs/app.log
 ```
 
 ## Evaluation
-- MAP: 0.76
-- NDCG@10: 0.88
+
+A custom evaluation script is provided to test the Engine's Mean Average Precision (MAP) and NDCG@10 against a simulated ground-truth dataset.
+
+Run the evaluation:
+```bash
+python -m scripts.evaluate
+```
+
+*Expected Output (varies by dataset size):*
+- MAP: ~0.76
+- NDCG@10: ~0.88
 
 
 ## 📜 License
