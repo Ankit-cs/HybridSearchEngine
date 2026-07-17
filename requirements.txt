@@ -20,3 +20,9 @@ torch
 sentence-transformers
 faiss-cpu
 pyarrow
+python-dotenv
+litellm
+groq
+openai
+google-generativeai
+lightgbm
