@@ -74,6 +74,29 @@ def main():
 
     for doc_id, title, text, url in data_parser.parse(source_path):
 
+        # Filter for India-specific documents (comprehensive)
+        text_lower = text.lower()
+        title_lower = title.lower()
+        
+        india_keywords = [
+            "india", "indian", "bharat", "hindustan", "modi", "gandhi", "nehru", 
+            "kalam", "vajpayee", "ashoka", "maurya", "gupta empire", "mughal", 
+            "chola", "maratha", "delhi", "mumbai", "bombay", "kolkata", "calcutta", 
+            "chennai", "madras", "bangalore", "bengaluru", "isro", "bollywood", 
+            "hinduism", "buddhism", "jainism", "sikhism", "vedic", "harappa", 
+            "mohenjo-daro", "indus valley", "east india company", "british raj",
+            "mahabharata", "ramayana", "sanskrit", "hindi", "tamil", "telugu"
+        ]
+        
+        is_indian = False
+        for kw in india_keywords:
+            if kw in title_lower or kw in text_lower:
+                is_indian = True
+                break
+                
+        if not is_indian:
+            continue
+
         tokens = tokenize(text)
 
         if not tokens:
@@ -92,9 +115,7 @@ def main():
         if total_docs % 100 == 0:
             logger.info(f"Generated embeddings for {total_docs} docs")
 
-        if total_docs % 1000 == 0:
-            logger.info("Stopping early at 1000 documents for fast testing.")
-            break
+
 
         doc_len = len(tokens)
         doc_lengths[doc_id] = doc_len
