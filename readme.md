@@ -1,4 +1,4 @@
-# 🚀 AstraSearch (India-Focused Hybrid Search Engine)
+# AstraSearch — India-Focused Hybrid Search Engine
 
 **AstraSearch** is a domain-specific hybrid search engine built from scratch in Python. It automatically filters large-scale Wikipedia datasets during indexing to create a specialized search engine focused exclusively on **Indian history, culture, geography, and leaders**.
 
@@ -6,36 +6,37 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 
 ---
 
-## ✨ Features
+## Features
 
-### 🔍 Core Search
+### Core Search
 - BM25 ranking (primary retrieval)
 - Inverted index with term frequencies
 - Title-aware ranking (separate title index)
 
-### 🧠 Semantic Search
+### Semantic Search
 - Transformer-based embeddings (`all-MiniLM-L6-v2`)
 - Cosine similarity for semantic matching
 - Precomputed document embeddings (offline)
 
-### ⚡ Hybrid Retrieval — Reciprocal Rank Fusion (RRF)
+### Hybrid Retrieval — Reciprocal Rank Fusion (RRF)
 - **RRF fusion algorithm** (industry gold standard used by ElasticSearch & Pinecone)
 - Combines BM25 rank + Semantic rank mathematically without raw score normalization
 - Achieves ~31% improvement in retrieval accuracy over basic linear interpolation
 - Formula: `1/(60 + rank_bm25) + 1/(60 + rank_semantic)`
 
-### 🤖 Learning-to-Rank (LightGBM LTR)
+
+### Learning-to-Rank (LightGBM LTR)
 - **LambdaMART gradient boosting model** trained on India-specific queries
 - Extracts 6 rich features per (query, doc) pair: BM25 score, semantic score, title overlap, body overlap, doc length, title match
 - ML model dynamically determines optimal ranking — no static rules
 - Gracefully falls back to RRF if model is not yet trained
 - Train with: `python -m scripts.train_ltr`
 
-### 🔄 Query Intelligence
+### Query Intelligence
 - Semantic query expansion
 - Improves recall for weak/short queries
 
-### 🧠 Agentic AI Layer (`/api/v1/agent/smart`)
+### Agentic AI Layer (`/api/v1/agent/smart`)
 - **Multi-LLM Support** via `litellm` (Groq / OpenAI / Gemini — auto-detected from `.env`)
 - **Multi-Agent Query Router** — classifies queries as `chat`, `literature`, or `compare`
 - **Corrective RAG (CRAG)** — rewrites query automatically if retrieval confidence is low
@@ -43,28 +44,28 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 - **Generative Answers** — LLM synthesizes a response from retrieved Wikipedia documents
 - Core `/api/v1/search` remains untouched and millisecond-fast
 
-### 📦 Data Support
+### Data Support
 - Multi-parser support (XML, CSV, extensible)
 - Automatic parser detection
 
-### ⚙️ System Design
+### System Design
 - Modular architecture (parser → index → ranking → API)
 - Separate document store and index
 - Metadata-driven ranking
 - Singleton embedding model (prevents double-loading in memory)
 
-### 🏎️ Enterprise-Grade Storage (AI-Lakehouse Inspired)
+### Enterprise-Grade Storage
 - **FAISS Vector Indexing** — blazing-fast similarity search via `IndexFlatIP`
 - **Memory-Mapped Loading** (`faiss.IO_FLAG_MMAP`) — vectors stream from disk, RAM usage stays near zero
 - **Apache Parquet Document Store** — columnar, compressed document storage via `pandas` / `pyarrow`
 - **ID Mapping Layer** — FAISS IDs are transparently mapped back to Wikipedia doc IDs
 
-### 🇮🇳 India-Specific Domain Filter
+### India-Specific Domain Filter
 - Automatically filters all 240k+ Wikipedia articles during indexing
 - Extracts only articles related to Indian history, culture, geography, politics, and leaders
 - Keywords include: Bharat, Mughal, Chola, Maratha, Ashoka, Gandhi, Modi, ISRO, Bollywood, Vedic, Sanskrit, and 30+ more
 
-### 🌐 API + UI
+### API + UI
 - FastAPI backend
 - Fast search endpoint (`/api/v1/search`)
 - Agentic AI endpoint (`/api/v1/agent/smart`)
@@ -73,11 +74,11 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ### Offline (Indexing)
 
-```bash
+```
 Dataset
  ↓
 Parser (auto-detected)
@@ -95,7 +96,7 @@ FAISS Index + Parquet Storage
 
 ### Online (Search) — 4-Tier Pipeline
 
-```bash
+```
 User Query
  ↓
 Tier 1: BM25 Retrieval  ← (milliseconds, top 1000 docs)
@@ -111,7 +112,7 @@ Final Results
 
 ### Agentic Path (`/api/v1/agent/smart`)
 
-```bash
+```
 User Query
  ↓
 Multi-Agent Router  ← (chat / literature / compare)
@@ -129,35 +130,35 @@ Each component is **independent, testable, and replaceable**, making the system 
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
-```bash
+```
 ├── src/
-│   ├── parser/       # Dataset parsers (XML, CSV, etc.)
+│   ├── parser/        # Dataset parsers (XML, CSV, etc.)
 │   ├── preprocessing/ # Cleaning & tokenization
-│   ├── indexer/      # Inverted index logic
-│   ├── storage/      # Document store & index reader
-│   ├── ranking/      # BM25, TF-IDF, LTR (LightGBM)
-│   ├── semantic/     # Embeddings, RRF reranker, query expansion, Cross-Encoder
-│   ├── agent/        # LLM client, query router, CRAG workflow
-│   ├── query/        # Search engine core (4-tier pipeline)
+│   ├── indexer/       # Inverted index logic
+│   ├── storage/       # Document store & index reader
+│   ├── ranking/       # BM25, TF-IDF, LTR (LightGBM)
+│   ├── semantic/      # Embeddings, RRF reranker, query expansion, Cross-Encoder
+│   ├── agent/         # LLM client, query router, CRAG workflow
+│   ├── query/         # Search engine core (4-tier pipeline)
 │   └── utils/
 ├── api/
 │   └── routes/
 │       ├── search.py   # /api/v1/search (fast, core)
 │       └── agentic.py  # /api/v1/agent/smart (AI layer)
-├── models/           # Trained LightGBM model (ltr_model.pkl)
-├── scripts/          # Indexing, evaluation, LTR training
-├── data/             # (ignored) raw + index files
+├── models/             # Trained LightGBM model (ltr_model.pkl)
+├── scripts/            # Indexing, evaluation, LTR training
+├── data/               # (ignored) raw + index files
 ├── logs/
-├── .env.example      # API key template
+├── .env.example        # API key template
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Create a virtual environment
 
@@ -203,7 +204,7 @@ python -m scripts.build_index --source data/raw/simplewiki.xml
 ```
 
 This generates:
-```bash
+```
 data/index/
 ├── inverted_index.json     # BM25 keyword index
 ├── title_index.json        # Title-boosted keyword index
@@ -235,16 +236,21 @@ python -m pytest
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 All paths and constants are centralized in:
-```bash
+```
 src/utils/config.py
+```
+
+Logs are written to:
+```
+logs/app.log
 ```
 
 ---
 
-## 🔑 Key Concepts Implemented
+## Key Concepts Implemented
 
 - Inverted Index (BM25 + TF-IDF)
 - Title-Aware Ranking with configurable boost factor
@@ -264,7 +270,7 @@ src/utils/config.py
 
 ---
 
-## 📊 Evaluation
+## Evaluation
 
 A custom evaluation script tests the engine's MAP and NDCG@10 against a simulated ground-truth dataset.
 
@@ -278,5 +284,5 @@ python -m scripts.evaluate
 
 ---
 
-## 📜 License
+## License
 MIT License
