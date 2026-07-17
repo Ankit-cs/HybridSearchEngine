@@ -13,7 +13,7 @@ INDEX_DIR.mkdir(parents=True, exist_ok=True)
 
 # Index files
 INVERTED_INDEX_PATH = INDEX_DIR / "inverted_index.json"
-DOCUMENT_STORE_PATH = INDEX_DIR / "documents.json"
+DOCUMENT_STORE_PATH = INDEX_DIR / "documents.parquet"
 METADATA_PATH = INDEX_DIR / "metadata.json"
 TITLE_INDEX_PATH = INDEX_DIR / "title_index.json"
 
@@ -34,5 +34,6 @@ RANKER = "bm25"  # options: "tfidf", "bm25"
 TITLE_BOOST = 3.0
 
 #embeddings path
-EMBEDDINGS_PATH = INDEX_DIR / "embeddings.json"
+EMBEDDINGS_PATH = INDEX_DIR / "embeddings.index"
+FAISS_ID_MAP_PATH = INDEX_DIR / "faiss_id_map.json"
 
