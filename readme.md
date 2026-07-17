@@ -278,26 +278,5 @@ python -m scripts.evaluate
 
 ---
 
-## 🆚 Project Comparisons
-
-### vs BERT-BM25-RRF
-Both projects share a similar dense-sparse hybrid architecture (BM25 + MiniLM). The key difference is fusion strategy:
-- **BERT-BM25-RRF**: Uses Reciprocal Rank Fusion (RRF) — achieves 31% accuracy gain.
-- **AstraSearch**: Now implements RRF + goes further with LightGBM LTR on top.
-
-### vs Agentic-Multi-RAG-Research-Assistant
-- **Agentic RAG**: An application-layer chatbot powered by retrieval.
-- **AstraSearch**: A domain-specific retrieval engine that now includes an **optional** agentic layer (`/api/v1/agent/smart`) while keeping core search millisecond-fast and isolated.
-
-### vs Ranking_System (MSMARCO LTR)
-- **Ranking_System**: Uses 50 features + LightGBM LambdaMART for full LTR on MSMARCO.
-- **AstraSearch**: Adapts the same LambdaMART approach with 6 focused India-domain features, integrated as Tier 4 of the search pipeline.
-
-### vs AI-Lakehouse
-- **AI-Lakehouse**: An enterprise Rust-based vector Lakehouse with ACID transactions and S3 integration.
-- **AstraSearch**: Borrows the storage concepts (FAISS + Parquet + memory-mapped loading) and applies them in a Python search application context.
-
----
-
 ## 📜 License
 MIT License
