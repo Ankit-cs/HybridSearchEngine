@@ -8,7 +8,8 @@ from src.query.search import SearchEngine
 from src.utils.config import (
     INVERTED_INDEX_PATH,
     DOCUMENT_STORE_PATH,
-    METADATA_PATH
+    METADATA_PATH,
+    CATALOG_DB_PATH,
 )
 
 from api.routes.search import router as search_router
@@ -17,8 +18,6 @@ from api.routes.agentic import router as agentic_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    
-    # STARTUP
     start = time.time()
 
     with open(METADATA_PATH) as f:
@@ -33,26 +32,23 @@ async def lifespan(app: FastAPI):
     app.state.engine = engine
 
     print(f"Engine loaded in {round(time.time() - start, 2)}s")
+    print(f"Catalog: {engine.get_catalog_stats()}")
 
+    yield
 
-
-    yield  #app runs while paused here
-
-    
-    # SHUTDOWN   
     print("Shutting down AstraSearch API")
+    engine.catalog.close()
 
 
 app = FastAPI(
     title="AstraSearch API",
-    version="1.0",
-    description="Search engine API powered by BM25 and title weighting",
-    lifespan=lifespan
+    version="2.0",
+    description="AI-Powered Hybrid Search Engine with ACID, Time-Travel, Dual Embeddings, and Agent Memory",
+    lifespan=lifespan,
 )
 
 import os
 
-# Get allowed origins from environment variable (default to * for local dev)
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
 app.add_middleware(
@@ -69,4 +65,4 @@ app.include_router(agentic_router)
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": "2.0"}
