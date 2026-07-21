@@ -1,28 +1,32 @@
-# Core (built-in, listed for clarity)
-# json
-# math
-# pathlib
-# collections
-# logging
-# xml.etree.ElementTree
-
-# External libraries (only what we actually use)
+# Core
 lxml>=4.9.0
 fastapi
 uvicorn
 pydantic
 mwparserfromhell
-ailake
 pandas
 gunicorn
+python-dotenv
+
+# ML/AI
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch
 sentence-transformers
 faiss-cpu
-pyarrow
-python-dotenv
+lightgbm
+numpy
+
+# LLM Integration
 litellm
 groq
 openai
 google-generativeai
-lightgbm
+
+# Storage
+pyarrow
+boto3
+google-cloud-storage
+
+# Utilities
+dataclasses
+uuid6
