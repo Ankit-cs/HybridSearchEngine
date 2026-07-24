@@ -4,12 +4,16 @@ from src.semantic.embedding_model import EmbeddingModel
 
 class SemanticReranker:
 
-    def __init__(self, embedding_store, k=60):
+    def __init__(self, embedding_store, k=60, bm25_weight=0.4, semantic_weight=0.6):
         """
         k -> RRF constant (default: 60)
+        bm25_weight -> Weight for sparse BM25 score (default: 0.4)
+        semantic_weight -> Weight for dense semantic score (default: 0.6)
         """
         self.embedding_store = embedding_store
         self.k = k
+        self.bm25_weight = bm25_weight
+        self.semantic_weight = semantic_weight
         self.model = EmbeddingModel()
 
     def rerank(self, query, documents):
@@ -47,8 +51,8 @@ class SemanticReranker:
             rank_bm25 = bm25_ranks[doc_id]
             rank_semantic = semantic_ranks[doc_id]
 
-            # RRF Formula
-            rrf_score = (1.0 / (self.k + rank_bm25)) + (1.0 / (self.k + rank_semantic))
+            # Weighted RRF Formula
+            rrf_score = (self.bm25_weight / (self.k + rank_bm25)) + (self.semantic_weight / (self.k + rank_semantic))
             fused_results.append((doc_id, rrf_score))
 
         # Sort final results by RRF score descending
