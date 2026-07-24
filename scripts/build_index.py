@@ -54,6 +54,8 @@ def main():
                         help="Batch ID for idempotent writes")
     parser.add_argument("--agent-id", type=str, default=None,
                         help="Agent ID for partition isolation")
+    parser.add_argument("--pq-only", action="store_true",
+                        help="Extreme storage mode: discard raw vectors and store only PQ codes")
     args = parser.parse_args()
 
     source_path = args.source
@@ -138,7 +140,8 @@ def main():
         )
 
         content_emb = embedding_model.encode(text[:512])[0]
-        embedding_store.add(doc_id, content_emb)
+        if not args.pq_only:
+            embedding_store.add(doc_id, content_emb)
         all_embeddings.append(content_emb)
         all_doc_ids.append(doc_id)
 
@@ -177,6 +180,11 @@ def main():
             centroid, radius, total_docs
         )
 
+        if args.pq_only:
+            logger.info("PQ-Only mode: Training IVF-PQ index and discarding raw vectors...")
+            embedding_store.init_index(all_embs_np.shape[1], index_type="ivf_pq")
+            embedding_store.add_batch(all_doc_ids, all_embs_np)
+
     write_index(index, INVERTED_INDEX_PATH)
     write_index(title_index, TITLE_INDEX_PATH)
     doc_store.save(DOCUMENT_STORE_PATH)
@@ -189,13 +197,14 @@ def main():
         "precision": args.precision,
         "use_dual_embeddings": args.use_dual_embeddings,
         "use_fts": args.use_fts,
+        "pq_only": args.pq_only,
         "created_at": time.time(),
     }
 
     with open(METADATA_PATH, "w") as f:
         json.dump(metadata, f)
 
-    if quantizer and all_embeddings:
+    if quantizer and all_embeddings and not args.pq_only:
         all_embs_np = np.array(all_embeddings, dtype=np.float32)
         quantized = quantizer.quantize(all_embs_np)
         quant_path = str(INDEX_DIR / f"vectors_quantized_{args.precision}.npy")
@@ -243,6 +252,7 @@ def main():
     logger.info("Indexing completed successfully")
     logger.info(f"Total documents indexed: {total_docs}")
     logger.info(f"Vector precision: {args.precision}")
+    logger.info(f"PQ-Only mode: {args.pq_only}")
     logger.info(f"Dual embeddings: {args.use_dual_embeddings}")
     logger.info(f"Persistent FTS: {args.use_fts}")
     logger.info(f"Catalog snapshot: v{snapshot.version}")
