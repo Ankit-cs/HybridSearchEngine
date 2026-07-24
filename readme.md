@@ -70,6 +70,7 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 - Keywords include: Bharat, Mughal, Chola, Maratha, Ashoka, Gandhi, Modi, ISRO, Bollywood, Vedic, Sanskrit, and 30+ more
 
 ### Vector Quantization
+- **PQ-Only Storage Mode (98% Compression)** — extreme storage savings by discarding raw vectors and storing only IVF-PQ codes (enabled via `--pq-only`)
 - **F16 Quantization** — half-precision vectors (50% memory reduction, negligible accuracy loss)
 - **I8 Quantization** — 8-bit integer vectors (75% memory reduction)
 - **IVF-PQ Compression** — Product Quantization with configurable M and nbits
@@ -363,6 +364,11 @@ python -m scripts.build_index --source data/raw/simplewiki.xml --agent-id resear
 python -m scripts.build_index --source data/raw/simplewiki.xml --precision i8
 ```
 
+**Extreme Compression Mode (PQ-Only):**
+```bash
+python -m scripts.build_index --source data/raw/simplewiki.xml --pq-only
+```
+
 This generates:
 ```
 data/index/
@@ -551,6 +557,7 @@ logs/app.log
 - **GPU-Accelerated Index** — automatic GPU detection and offload
 - **Adaptive Index Selection** — auto-selects optimal index type by corpus size
 - **F16/I8 Vector Quantization** — memory-efficient vector storage
+- **PQ-Only Storage Mode** — extreme compression discarding raw vectors
 - **Memory-Mapped Index Loading** (near-zero RAM overhead)
 - **Apache Parquet Storage** (compressed columnar documents)
 - **Singleton Embedding Model** (prevents OOM on startup)
