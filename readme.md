@@ -10,7 +10,7 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 
 ### Core Search (BM25)
 - BM25 ranking (primary retrieval)
-- **Ultra-fast Sub-word Tokenization** using `gigatoken` BPE (handles compound words perfectly)
+- **Ultra-fast Sub-word Tokenization**: Previously we were using the default HuggingFace GPT-2 tokenization and now we are upgraded to modern Tiktoken `cl100k_base` utilizing `gigatoken` BPE (handles compound words perfectly at maximum speeds)
 - Inverted index with term frequencies
 - Title-aware ranking (separate title index)
 
