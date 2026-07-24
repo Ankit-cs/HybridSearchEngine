@@ -18,11 +18,11 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 - Cosine similarity for semantic matching
 - Precomputed document embeddings (offline)
 
-### Hybrid Retrieval — Reciprocal Rank Fusion (RRF)
-- **RRF fusion algorithm** (industry gold standard used by ElasticSearch & Pinecone)
-- Combines BM25 rank + Semantic rank mathematically without raw score normalization
+### Hybrid Retrieval — Weighted Reciprocal Rank Fusion (RRF)
+- **Weighted RRF algorithm** (industry gold standard used by ElasticSearch & Pinecone)
+- Combines BM25 rank + Semantic rank mathematically with tunable bias (e.g. 0.6 Semantic / 0.4 BM25)
 - Achieves ~31% improvement in retrieval accuracy over basic linear interpolation
-- Formula: `1/(60 + rank_bm25) + 1/(60 + rank_semantic)`
+- Formula: `(weight_bm25 / (60 + rank_bm25)) + (weight_semantic / (60 + rank_semantic))`
 
 
 ### Learning-to-Rank (LightGBM LTR)
@@ -237,6 +237,7 @@ Each component is **independent, testable, and replaceable**, making the system 
 │   ├── query/         # Search engine core (4-tier pipeline + context assembly)
 │   └── utils/
 │       └── config.py  # All centralized paths and constants
+├── frontend/           # React + Vite web application
 ├── api/
 │   ├── app.py            # FastAPI application (v2.0)
 │   └── routes/
@@ -547,7 +548,7 @@ logs/app.log
 - Inverted Index (BM25 + TF-IDF)
 - Title-Aware Ranking with configurable boost factor
 - Semantic Embeddings (`all-MiniLM-L6-v2` via SentenceTransformers)
-- **Reciprocal Rank Fusion (RRF)** — rank-based hybrid score merging
+- **Weighted Reciprocal Rank Fusion (RRF)** — rank-based hybrid score merging with semantic/sparse biasing
 - **Learning-to-Rank (LightGBM LambdaMART)** — ML-based final re-ranking
 - Semantic Query Expansion
 - Offline vs Online computation split
