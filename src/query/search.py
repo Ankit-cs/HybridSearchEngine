@@ -14,6 +14,7 @@ from src.storage.time_travel import TimeTravelManager
 from src.ranking.tfidf import TFIDFRanker
 from src.ranking.bm25 import BM25Ranker
 from src.ranking.ltr_ranker import LightGBMRanker
+from src.ranking.fixed_point import sort_by_fixed_point
 
 from src.utils.config import (
     METADATA_PATH,
@@ -89,6 +90,7 @@ class SearchEngine:
             embedding_store=self.embedding_store,
             doc_store=self.doc_store,
             metadata=metadata,
+            index_reader=self.index_reader,
         )
 
         self.query_expander = QueryExpander(
@@ -151,13 +153,13 @@ class SearchEngine:
                 for doc_id, fts_score in fts_results:
                     existing = scores.get(doc_id, 0.0)
                     scores[doc_id] = existing + fts_score * 0.5
-                ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+                ranked = sort_by_fixed_point(list(scores.items()))
             else:
                 scores = self.ranker.score(tokens)
-                ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+                ranked = sort_by_fixed_point(list(scores.items()))
         else:
             scores = self.ranker.score(tokens)
-            ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+            ranked = sort_by_fixed_point(list(scores.items()))
 
         if column_filter:
             ranked = self._apply_column_filter(ranked, column_filter)
@@ -165,7 +167,7 @@ class SearchEngine:
         expanded_query = self.query_expander.expand(query, ranked[:20])
         tokens = parse_query(expanded_query)
         scores = self.ranker.score(tokens)
-        ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        ranked = sort_by_fixed_point(list(scores.items()))
 
         if use_dual and self.dual_store.content_index is not None:
             from src.semantic.embedding_model import EmbeddingModel
@@ -217,8 +219,7 @@ class SearchEngine:
                             boosted.append((doc_id, score * 1.2))
                         else:
                             boosted.append((doc_id, score))
-                    boosted.sort(key=lambda x: x[1], reverse=True)
-                    ranked = boosted
+                    ranked = sort_by_fixed_point(boosted)
 
         if self.working_memory.size() > 0:
             from src.semantic.embedding_model import EmbeddingModel
