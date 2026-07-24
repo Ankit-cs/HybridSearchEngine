@@ -8,8 +8,9 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 
 ## Features
 
-### Core Search
+### Core Search (BM25)
 - BM25 ranking (primary retrieval)
+- **Ultra-fast Sub-word Tokenization** using `gigatoken` BPE (handles compound words perfectly)
 - Inverted index with term frequencies
 - Title-aware ranking (separate title index)
 
@@ -546,6 +547,7 @@ logs/app.log
 ## Key Concepts Implemented
 
 - Inverted Index (BM25 + TF-IDF)
+- **Intelligent BPE Sub-word Tokenization** (via Rust-based `gigatoken`)
 - Title-Aware Ranking with configurable boost factor
 - Semantic Embeddings (`all-MiniLM-L6-v2` via SentenceTransformers)
 - **Weighted Reciprocal Rank Fusion (RRF)** — rank-based hybrid score merging with semantic/sparse biasing
