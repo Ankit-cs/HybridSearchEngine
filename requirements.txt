@@ -15,7 +15,8 @@ sentence-transformers
 faiss-cpu
 lightgbm
 numpy
-
+gigatoken
+tiktoken
 # LLM Integration
 litellm
 groq
