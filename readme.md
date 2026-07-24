@@ -580,6 +580,7 @@ logs/app.log
 - **Agent Memory** (episodic long-term + working short-term + per-agent partitions)
 - **LLM Context Assembly** (token-limited, deduplicated context from search results)
 - **Hardware-Agnostic Ranking Consistency** (Fixed-point reductions to guarantee deterministic sorting across architectures)
+- **50-Dimension LTR Feature Vector** (MSMARCO-style TF-IDF aggregations and positional metrics for LightGBM)
 
 ---
 
