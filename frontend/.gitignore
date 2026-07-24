@@ -1,0 +1,5 @@
+# Node.js example
+node_modules/
+.env
+dist/
+*.log
