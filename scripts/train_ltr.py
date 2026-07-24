@@ -4,12 +4,14 @@ Trains a LightGBM Ranker (LambdaMART) on the indexed India Wikipedia dataset.
 
 How it works:
   1. Loads the existing BM25 index + embeddings + doc store.
-  2. Generates synthetic training data: for each query, top BM25 results are
-     used as candidates. The best result (rank 1) is labeled "relevant" (label=1),
-     the rest "non-relevant" (label=0). This simulates a click-through signal.
-  3. Extracts the 6-dimensional feature vector for each (query, doc) pair.
-  4. Trains a LightGBM Ranker using the LambdaMART objective.
-  5. Saves the trained model to models/ltr_model.pkl.
+  2. Splits TRAINING_QUERIES into Train (80%) and Validation (20%) sets.
+  3. Generates synthetic training data: for each query, top BM25 results are
+     used as candidates. The best result (rank 1) is labeled "relevant" (label=2),
+     ranks 2-4 (label=1), the rest (label=0).
+  4. Extracts the 50-dimensional feature vector for each (query, doc) pair.
+  5. Uses Optuna to find the optimal hyperparameters via the Validation set.
+  6. Trains the final LightGBM Ranker using the LambdaMART objective.
+  7. Saves the trained model to models/ltr_model.pkl.
 
 Usage:
   python -m scripts.train_ltr
@@ -17,8 +19,10 @@ Usage:
 import json
 import os
 import pickle
+import random
 import numpy as np
 import lightgbm as lgb
+import optuna
 
 from src.query.query_parser import parse_query
 from src.storage.index_reader import IndexReader
@@ -65,34 +69,10 @@ CANDIDATES_PER_QUERY = 20  # Number of BM25 candidates per query
 # ───────────────────────────────────────────────────────────────────────────────
 
 
-def main():
-    print("[LTR Training] Loading indexes...")
+def build_dataset(queries, ranker, index_reader, doc_store, embedding_store, avg_doc_length, total_docs):
+    X_all, y_all, groups = [], [], []
 
-    index_reader       = IndexReader(INDEX_PATH)
-    title_index_reader = IndexReader(TITLE_INDEX_PATH)
-    doc_store          = DocumentStore()
-    doc_store.load(DOC_STORE_PATH)
-    embedding_store    = EmbeddingStore()
-    embedding_store.load(EMBEDDINGS_PATH)
-
-    with open(METADATA_PATH, "r") as f:
-        metadata = json.load(f)
-
-    ranker = BM25Ranker(
-        body_index=index_reader,
-        title_index=title_index_reader,
-        metadata=metadata,
-    )
-
-    avg_doc_length = metadata.get("avg_doc_length", 400)
-
-    X_all    = []
-    y_all    = []
-    groups   = []  # Required by LightGBM LambdaMART: number of docs per query
-
-    print(f"[LTR Training] Building features for {len(TRAINING_QUERIES)} queries...")
-
-    for query in TRAINING_QUERIES:
+    for query in queries:
         tokens = parse_query(query)
         if not tokens:
             continue
@@ -117,10 +97,11 @@ def main():
                 embedding_store=embedding_store,
                 doc_store=doc_store,
                 avg_doc_length=avg_doc_length,
+                index_reader=index_reader,
+                total_docs=total_docs
             )
             X_all.append(features)
 
-            # Relevance label: 2 for top-1, 1 for top-5, 0 for the rest
             if rank_idx == 0:
                 label = 2
             elif rank_idx < 5:
@@ -133,37 +114,115 @@ def main():
 
         groups.append(group_size)
 
-    X = np.array(X_all, dtype=np.float32)
-    y = np.array(y_all, dtype=np.int32)
+    return np.array(X_all, dtype=np.float32), np.array(y_all, dtype=np.int32), groups
 
-    print(f"[LTR Training] Total training samples: {len(X)}")
-    print(f"[LTR Training] Training LightGBM LambdaMART model...")
 
-    train_dataset = lgb.Dataset(X, label=y, group=groups)
+def main():
+    print("[LTR Training] Loading indexes...")
 
-    params = {
-        "objective":        "lambdarank",
-        "metric":           "ndcg",
-        "ndcg_eval_at":     [5, 10],
-        "learning_rate":    0.05,
-        "num_leaves":       31,
-        "min_data_in_leaf": 5,
-        "n_estimators":     200,
-        "verbose":          -1,
+    index_reader       = IndexReader(INDEX_PATH)
+    title_index_reader = IndexReader(TITLE_INDEX_PATH)
+    doc_store          = DocumentStore()
+    doc_store.load(DOC_STORE_PATH)
+    embedding_store    = EmbeddingStore()
+    embedding_store.load(EMBEDDINGS_PATH)
+
+    with open(METADATA_PATH, "r") as f:
+        metadata = json.load(f)
+
+    ranker = BM25Ranker(
+        body_index=index_reader,
+        title_index=title_index_reader,
+        metadata=metadata,
+    )
+
+    avg_doc_length = metadata.get("avg_doc_length", 400)
+    total_docs = metadata.get("total_docs", 0)
+
+    # 1. Train / Validation Split
+    print("[LTR Training] Splitting training queries...")
+    random.shuffle(TRAINING_QUERIES)
+    split_idx = int(len(TRAINING_QUERIES) * 0.8)
+    train_queries = TRAINING_QUERIES[:split_idx]
+    val_queries = TRAINING_QUERIES[split_idx:]
+
+    print(f"[LTR Training] Building Train features ({len(train_queries)} queries)...")
+    X_train, y_train, g_train = build_dataset(
+        train_queries, ranker, index_reader, doc_store, embedding_store, avg_doc_length, total_docs
+    )
+
+    print(f"[LTR Training] Building Validation features ({len(val_queries)} queries)...")
+    X_val, y_val, g_val = build_dataset(
+        val_queries, ranker, index_reader, doc_store, embedding_store, avg_doc_length, total_docs
+    )
+    
+    if len(X_train) == 0 or len(X_val) == 0:
+        print("[LTR Training] Not enough data to train/validate. Aborting.")
+        return
+
+    train_dataset = lgb.Dataset(X_train, label=y_train, group=g_train)
+    val_dataset = lgb.Dataset(X_val, label=y_val, group=g_val, reference=train_dataset)
+
+    # 2. Optuna Objective
+    def objective(trial):
+        params = {
+            "objective": "lambdarank",
+            "metric": "ndcg",
+            "ndcg_eval_at": [10],
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2),
+            "num_leaves": trial.suggest_int("num_leaves", 15, 63),
+            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 20),
+            "n_estimators": trial.suggest_int("n_estimators", 50, 300),
+            "verbose": -1,
+        }
+
+        # Train with early stopping
+        model = lgb.train(
+            params,
+            train_dataset,
+            valid_sets=[val_dataset],
+            callbacks=[lgb.early_stopping(stopping_rounds=20, verbose=False)]
+        )
+        
+        # We maximize the best validation ndcg@10 achieved
+        return model.best_score["valid_0"]["ndcg@10"]
+
+    print("[LTR Training] Running Optuna Hyperparameter Optimization...")
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=10) # 10 trials for brevity
+
+    best_params = study.best_params
+    print(f"[LTR Training] Optuna Best NDCG@10: {study.best_value:.4f}")
+    print(f"[LTR Training] Optuna Best Params: {best_params}")
+
+    # 3. Train Final Model
+    print("[LTR Training] Training final model with optimal parameters...")
+    final_params = {
+        "objective": "lambdarank",
+        "metric": "ndcg",
+        "ndcg_eval_at": [5, 10],
+        "verbose": -1,
     }
-
-    model = lgb.train(
-        params,
+    final_params.update(best_params)
+    
+    # We can train on the whole dataset or just train using early stopping on val
+    final_model = lgb.train(
+        final_params,
         train_dataset,
-        num_boost_round=200,
+        valid_sets=[val_dataset],
+        callbacks=[
+            lgb.early_stopping(stopping_rounds=20, verbose=True),
+            lgb.log_evaluation(period=20)
+        ]
     )
 
     os.makedirs("models", exist_ok=True)
     with open(MODEL_OUTPUT, "wb") as f:
-        pickle.dump(model, f)
+        pickle.dump(final_model, f)
 
     print(f"[LTR Training] ✅ Model saved to {MODEL_OUTPUT}")
-    print("[LTR Training] Run your search server now — LTR will be automatically enabled!")
+    print("[LTR Training] Run your search server now — the upgraded LTR is automatically enabled!")
 
 
 if __name__ == "__main__":
