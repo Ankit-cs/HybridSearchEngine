@@ -28,7 +28,9 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 
 ### Learning-to-Rank (LightGBM LTR)
 - **LambdaMART gradient boosting model** trained on India-specific queries
-- Extracts 6 rich features per (query, doc) pair: BM25 score, semantic score, title overlap, body overlap, doc length, title match
+- **Automated Hyperparameter Tuning**: Uses Optuna to dynamically find the optimal learning rate, tree depth, and estimators.
+- **Robust Generalization**: Implements an 80/20 Train/Validation Split with Early Stopping to prevent overfitting.
+- Extracts 50 rich features per (query, doc) pair: TF/IDF aggregations, semantic score, exact phrase match, term density, and coverage ratios.
 - ML model dynamically determines optimal ranking — no static rules
 - Gracefully falls back to RRF if model is not yet trained
 - Train with: `python -m scripts.train_ltr`
