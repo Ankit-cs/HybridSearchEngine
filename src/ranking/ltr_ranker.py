@@ -12,15 +12,18 @@ import pickle
 import numpy as np
 
 from src.ranking.ltr_features import extract_features
+from src.ranking.fixed_point import sort_by_fixed_point
 
 # Default model path (set via config or fallback to this path)
 DEFAULT_MODEL_PATH = "models/ltr_model.pkl"
 
 
 class LightGBMRanker:
-    def __init__(self, embedding_store, doc_store, metadata, model_path=None):
+    def __init__(self, embedding_store, doc_store, metadata, index_reader=None, model_path=None):
         self.embedding_store = embedding_store
         self.doc_store = doc_store
+        self.index_reader = index_reader
+        self.total_docs = metadata.get("total_docs", 0)
         self.avg_doc_length = metadata.get("avg_doc_length", 400)
 
         # Load LightGBM model if it exists
@@ -61,6 +64,8 @@ class LightGBMRanker:
                 embedding_store=self.embedding_store,
                 doc_store=self.doc_store,
                 avg_doc_length=self.avg_doc_length,
+                index_reader=self.index_reader,
+                total_docs=self.total_docs
             )
             feature_matrix.append(features)
             doc_ids.append(doc_id)
@@ -70,10 +75,10 @@ class LightGBMRanker:
         if not self.is_ready():
             # Graceful fallback: RRF-style on norm_bm25 + semantic_score
             fallback_scores = (X[:, 0] + X[:, 1]).tolist()
-            ranked = sorted(zip(doc_ids, fallback_scores), key=lambda x: x[1], reverse=True)
+            ranked = sort_by_fixed_point(list(zip(doc_ids, fallback_scores)))
             return ranked
 
         # LightGBM predict (returns relevance scores)
         scores = self.model.predict(X)
-        ranked = sorted(zip(doc_ids, scores.tolist()), key=lambda x: x[1], reverse=True)
+        ranked = sort_by_fixed_point(list(zip(doc_ids, scores.tolist())))
         return ranked
