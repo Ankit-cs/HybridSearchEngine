@@ -36,9 +36,11 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 - Gracefully falls back to RRF if model is not yet trained
 - Train with: `python -m scripts.train_ltr`
 
-### Query Intelligence
-- Semantic query expansion
-- Improves recall for weak/short queries
+### Query Intelligence & GraphRAG
+- Semantic query expansion (Improves recall for weak/short queries)
+- **LLM-Driven Graph ETL**: Extracts entities and relationships from indexed chunks to build a local Knowledge Graph.
+- **Graph Expansion Retrieval**: LightGBM uses a `graph_support_score` derived from 1-hop network expansions to boost documents connected to query entities.
+- **Retrieval Inspector**: A dedicated `/api/v1/search/explain` endpoint and UI widget that provides transparent visual breakdowns of BM25, Semantic, and Graph scores for every search result.
 
 ### Agentic AI Layer (`/api/v1/agent/smart`)
 - **Multi-LLM Support** via `litellm` (Groq / OpenAI / Gemini — auto-detected from `.env`)
