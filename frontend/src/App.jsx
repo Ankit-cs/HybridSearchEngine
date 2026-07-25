@@ -5,6 +5,7 @@ function App() {
   const [k, setK] = useState(10);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [explainMode, setExplainMode] = useState(false);
   const [error, setError] = useState("");
   const [searchTime, setSearchTime] = useState(null);
 
@@ -20,7 +21,8 @@ function App() {
     setSearchTime(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}&k=${k}`);
+      const endpoint = explainMode ? '/api/v1/search/explain' : '/api/v1/search';
+      const response = await fetch(`${API_BASE_URL}${endpoint}?q=${encodeURIComponent(query)}&k=${k}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -81,6 +83,16 @@ function App() {
               Search
             </button>
           </form>
+          <div className="flex justify-center items-center mt-4 gap-2 text-sm text-slate-300">
+            <input 
+              type="checkbox" 
+              id="explain-mode" 
+              checked={explainMode} 
+              onChange={(e) => setExplainMode(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-700/50 text-blue-500 focus:ring-blue-500/50 focus:ring-offset-0"
+            />
+            <label htmlFor="explain-mode" className="cursor-pointer select-none">Enable Retrieval Inspector (Explain Mode)</label>
+          </div>
         </div>
 
         {/* Status / Errors */}
@@ -136,9 +148,48 @@ function App() {
                 )}
               </div>
               
-              <div className="text-slate-200 text-[15px] leading-relaxed">
+              <div className="text-slate-200 text-[15px] leading-relaxed mb-4">
                 <p>{r.snippet || "No snippet available."}</p>
               </div>
+
+              {r.components && (
+                <div className="mt-4 p-4 rounded-xl bg-black/20 border border-white/5">
+                  <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Retrieval Inspector Breakdown</h4>
+                  
+                  {/* BM25 */}
+                  <div className="mb-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-blue-300">BM25 (Keyword)</span>
+                      <span className="text-slate-400">{r.components.bm25.toFixed(2)}</span>
+                    </div>
+                    <div className="w-full bg-slate-800 rounded-full h-1.5">
+                      <div className="bg-blue-400 h-1.5 rounded-full" style={{ width: `${Math.min(100, Math.max(0, r.components.bm25 * 5))}%` }}></div>
+                    </div>
+                  </div>
+
+                  {/* Semantic */}
+                  <div className="mb-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-purple-300">Semantic (Vector)</span>
+                      <span className="text-slate-400">{r.components.semantic.toFixed(2)}</span>
+                    </div>
+                    <div className="w-full bg-slate-800 rounded-full h-1.5">
+                      <div className="bg-purple-400 h-1.5 rounded-full" style={{ width: `${Math.min(100, Math.max(0, r.components.semantic * 100))}%` }}></div>
+                    </div>
+                  </div>
+
+                  {/* Graph */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-emerald-300">Graph Expansion</span>
+                      <span className="text-slate-400">{r.components.graph.toFixed(2)}</span>
+                    </div>
+                    <div className="w-full bg-slate-800 rounded-full h-1.5">
+                      <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: `${Math.min(100, Math.max(0, r.components.graph * 20))}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
           
