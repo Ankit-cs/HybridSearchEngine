@@ -18,26 +18,24 @@ from api.routes.graph import router as graph_router
 from api.routes.generate import router as generate_router
 
 
+# Instantiate the SearchEngine globally to prevent `httpx` event loop issues 
+# with Hugging Face Hub's synchronous client.
+with open(METADATA_PATH) as f:
+    metadata = json.load(f)
+
+global_start = time.time()
+engine = SearchEngine(
+    INVERTED_INDEX_PATH,
+    DOCUMENT_STORE_PATH,
+    total_docs=metadata["total_docs"]
+)
+print(f"Engine loaded in {round(time.time() - global_start, 2)}s")
+print(f"Catalog: {engine.get_catalog_stats()}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    start = time.time()
-
-    with open(METADATA_PATH) as f:
-        metadata = json.load(f)
-
-    engine = SearchEngine(
-        INVERTED_INDEX_PATH,
-        DOCUMENT_STORE_PATH,
-        total_docs=metadata["total_docs"]
-    )
-
     app.state.engine = engine
-
-    print(f"Engine loaded in {round(time.time() - start, 2)}s")
-    print(f"Catalog: {engine.get_catalog_stats()}")
-
     yield
-
     print("Shutting down AstraSearch API")
     engine.catalog.close()
 
