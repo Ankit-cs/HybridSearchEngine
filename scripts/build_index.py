@@ -23,6 +23,10 @@ from src.preprocessing.tokenizer import tokenize
 from src.indexer.inverted_index import InvertedIndex
 from src.indexer.index_writer import write_index
 from src.indexer.compression import GeometricPruner, VectorQuantizer
+from src.parser.document_loaders import load_document
+from src.parser.vision import VisionAnalyzer, SUPPORTED_IMAGE_EXTS
+from src.preprocessing.chunker import SemanticChunker
+from pathlib import Path
 from src.indexer.fts import PersistentFTSIndex
 from src.storage.document_store import DocumentStore
 from src.storage.catalog import Catalog, FileManifest
@@ -109,11 +113,29 @@ def main():
     all_embeddings = []
     all_doc_ids = []
 
-    data_parser = get_parser(parser_type)
+    semantic_chunker = SemanticChunker(max_tokens=512, overlap_tokens=64)
+    
+    ext = Path(source_path).suffix.lower()
+    is_standard_file = ext in (".pdf", ".html", ".htm", ".txt", ".md", ".markdown", ".rst")
+    is_image_file = ext in SUPPORTED_IMAGE_EXTS
+    
+    def document_generator():
+        if is_image_file:
+            analyzer = VisionAnalyzer()
+            text = analyzer.describe_image(source_path)
+            yield uuid.uuid4().hex[:8], Path(source_path).name, text, str(source_path)
+        elif is_standard_file:
+            text = load_document(source_path)
+            yield uuid.uuid4().hex[:8], Path(source_path).name, text, str(source_path)
+        else:
+            data_parser = get_parser(parser_type)
+            for doc_id, title, text, url in data_parser.parse(source_path):
+                yield doc_id, title, text, url
+
     vectors_for_centroids = []
 
-    for doc_id, title, text, url in data_parser.parse(source_path):
-        text_lower = text.lower()
+    for doc_id, title, raw_text, url in document_generator():
+        text_lower = raw_text.lower()
         title_lower = title.lower()
 
         india_keywords = [
@@ -127,62 +149,70 @@ def main():
         ]
 
         is_indian = any(kw in title_lower or kw in text_lower for kw in india_keywords)
-        if not is_indian:
+        # We don't filter out PDFs/Images if they don't explicitly contain Indian keywords for testing
+        if not is_indian and not (is_standard_file or is_image_file):
             continue
 
-        tokens = tokenize(text)
-        if not tokens:
+        chunks = semantic_chunker.chunk_text(raw_text)
+        if not chunks:
             continue
+            
+        for chunk_idx, chunk_text in enumerate(chunks):
+            chunk_id = f"{doc_id}_{chunk_idx}"
+            
+            tokens = tokenize(chunk_text)
+            if not tokens:
+                continue
 
-        index.add_document(doc_id, tokens)
-        doc_store.add(doc_id, title, url, text)
+            index.add_document(chunk_id, tokens)
+            doc_store.add(chunk_id, title, url, chunk_text)
 
-        chunk_meta = ChunkMetadata(
-            document_id=str(doc_id),
-            document_title=title,
-            source_uri=url,
-            chunk_index=0,
-            total_chunks=1,
-        )
-
-        content_emb = embedding_model.encode(text[:512])[0]
-        if not args.pq_only:
-            embedding_store.add(doc_id, content_emb)
-        all_embeddings.append(content_emb)
-        all_doc_ids.append(doc_id)
-
-        if dual_generator and dual_store:
-            dual_result = dual_generator.generate(
-                text[:512], title=title, summary=title
-            )
-            dual_store.add(
-                doc_id,
-                dual_result.content_embedding,
-                dual_result.context_embedding,
+            chunk_meta = ChunkMetadata(
+                document_id=str(doc_id),
+                document_title=title,
+                source_uri=url,
+                chunk_index=chunk_idx,
+                total_chunks=len(chunks),
             )
 
-        if fts_index:
-            fts_index.index_document(str(doc_id), tokens)
+            content_emb = embedding_model.encode(chunk_text)[0]
+            if not args.pq_only:
+                embedding_store.add(chunk_id, content_emb)
+            all_embeddings.append(content_emb)
+            all_doc_ids.append(chunk_id)
 
-        if graph_etl:
-            relations = graph_etl.extract_relations(text[:1000]) # Extract from first 1000 chars to save tokens
-            knowledge_graph = graph_etl.merge_graphs(knowledge_graph, relations, doc_id)
-            if total_docs % 10 == 0:
-                logger.info(f"Graph ETL extracted {len(knowledge_graph['edges'])} total edges so far.")
+            if dual_generator and dual_store:
+                dual_result = dual_generator.generate(
+                    chunk_text, title=title, summary=title
+                )
+                dual_store.add(
+                    chunk_id,
+                    dual_result.content_embedding,
+                    dual_result.context_embedding,
+                )
 
-        total_docs += 1
-        if total_docs % 100 == 0:
-            logger.info(f"Indexed {total_docs} docs")
+            if fts_index:
+                fts_index.index_document(str(chunk_id), tokens)
 
-        doc_len = len(tokens)
-        doc_lengths[doc_id] = doc_len
-        total_length += doc_len
+            if graph_etl and chunk_idx == 0: # Only extract graph from first chunk to save tokens
+                relations = graph_etl.extract_relations(chunk_text[:1000])
+                knowledge_graph = graph_etl.merge_graphs(knowledge_graph, relations, chunk_id)
+                if total_docs % 10 == 0:
+                    logger.info(f"Graph ETL extracted {len(knowledge_graph['edges'])} total edges so far.")
 
-        title_tokens = tokenize(title)
-        if title_tokens:
-            title_index.add_document(doc_id, title_tokens)
+            total_docs += 1
+            if total_docs % 100 == 0:
+                logger.info(f"Indexed {total_docs} chunks")
 
-        vectors_for_centroids.append(content_emb)
+            doc_len = len(tokens)
+            doc_lengths[chunk_id] = doc_len
+            total_length += doc_len
+
+            title_tokens = tokenize(title)
+            if title_tokens:
+                title_index.add_document(chunk_id, title_tokens)
+
+            vectors_for_centroids.append(content_emb)
 
     if all_embeddings:
         all_embs_np = np.array(all_embeddings, dtype=np.float32)
