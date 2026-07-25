@@ -18,7 +18,7 @@ numpy
 gigatoken
 tiktoken
 # LLM Integration
-litellm
+litellm==1.40.0
 groq
 openai
 google-generativeai
