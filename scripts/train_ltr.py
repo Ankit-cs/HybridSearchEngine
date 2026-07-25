@@ -28,6 +28,7 @@ from src.query.query_parser import parse_query
 from src.storage.index_reader import IndexReader
 from src.storage.document_store import DocumentStore
 from src.semantic.embedding_store import EmbeddingStore
+from src.semantic.embedding_model import EmbeddingModel
 from src.ranking.bm25 import BM25Ranker
 from src.ranking.ltr_features import extract_features
 from src.utils.config import (
@@ -69,7 +70,7 @@ CANDIDATES_PER_QUERY = 20  # Number of BM25 candidates per query
 # ───────────────────────────────────────────────────────────────────────────────
 
 
-def build_dataset(queries, ranker, index_reader, doc_store, embedding_store, avg_doc_length, total_docs):
+def build_dataset(queries, ranker, index_reader, doc_store, embedding_store, embed_model, avg_doc_length, total_docs):
     X_all, y_all, groups = [], [], []
 
     for query in queries:
@@ -79,15 +80,22 @@ def build_dataset(queries, ranker, index_reader, doc_store, embedding_store, avg
 
         scores = ranker.score(tokens)
         ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-        candidates = ranked[:CANDIDATES_PER_QUERY]
+        bm25_candidates = [doc_id for doc_id, _ in ranked[:CANDIDATES_PER_QUERY]]
 
-        if not candidates:
+        query_vector = embed_model.encode([query])[0]
+        semantic_results = embedding_store.search(query_vector, top_k=CANDIDATES_PER_QUERY)
+        semantic_candidates = [res["doc_id"] for res in semantic_results]
+
+        combined_candidates = list(dict.fromkeys(bm25_candidates + semantic_candidates))
+
+        if not combined_candidates:
             continue
 
-        max_bm25 = max(s for _, s in candidates) or 1.0
+        max_bm25 = max(scores.values()) if scores else 1.0
         group_size = 0
 
-        for rank_idx, (doc_id, bm25_score) in enumerate(candidates):
+        for rank_idx, doc_id in enumerate(combined_candidates):
+            bm25_score = scores.get(doc_id, 0.0)
             features = extract_features(
                 query=query,
                 query_tokens=tokens,
@@ -126,6 +134,7 @@ def main():
     doc_store.load(DOC_STORE_PATH)
     embedding_store    = EmbeddingStore()
     embedding_store.load(EMBEDDINGS_PATH)
+    embed_model        = EmbeddingModel()
 
     with open(METADATA_PATH, "r") as f:
         metadata = json.load(f)
@@ -148,12 +157,12 @@ def main():
 
     print(f"[LTR Training] Building Train features ({len(train_queries)} queries)...")
     X_train, y_train, g_train = build_dataset(
-        train_queries, ranker, index_reader, doc_store, embedding_store, avg_doc_length, total_docs
+        train_queries, ranker, index_reader, doc_store, embedding_store, embed_model, avg_doc_length, total_docs
     )
 
     print(f"[LTR Training] Building Validation features ({len(val_queries)} queries)...")
     X_val, y_val, g_val = build_dataset(
-        val_queries, ranker, index_reader, doc_store, embedding_store, avg_doc_length, total_docs
+        val_queries, ranker, index_reader, doc_store, embedding_store, embed_model, avg_doc_length, total_docs
     )
     
     if len(X_train) == 0 or len(X_val) == 0:
