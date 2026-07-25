@@ -2,6 +2,7 @@ from src.parser.wiki_parser import WikiParser
 from src.parser.text_parser import TextParser
 from src.parser.json_parser import JsonParser
 from src.parser.csv_parser import CsvParser
+from src.parser.msmarco_parser import MsmarcoParser
 from pathlib import Path
 
 
@@ -18,6 +19,9 @@ def get_parser(parser_type):
 
     if parser_type == "csv":
         return CsvParser()
+
+    if parser_type == "msmarco":
+        return MsmarcoParser()
 
     raise ValueError(f"Unknown parser type: {parser_type}")
 
@@ -42,5 +46,8 @@ def detect_parser(source_path):
 
     if ext == ".csv":
         return "csv"
+
+    if ext == ".tsv":
+        return "msmarco"
 
     raise ValueError(f"Cannot detect parser for: {source_path}")
