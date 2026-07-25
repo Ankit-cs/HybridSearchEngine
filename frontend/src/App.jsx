@@ -36,28 +36,29 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-slate-900 font-sans">
+    <div className="min-h-screen text-slate-100 font-sans">
       <div className="max-w-4xl mx-auto px-4 py-12">
         
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-[42px] font-bold mb-4 text-[#1a73e8]">
+          <h1 className="text-[52px] font-bold mb-4 gradient-text">
             AstraSearch
           </h1>
+          <p className="text-slate-300 opacity-80">Next-gen Hybrid Search Engine</p>
         </div>
 
         {/* Search Bar Container */}
-        <div className="max-w-2xl mx-auto mb-8">
+        <div className="max-w-3xl mx-auto mb-10">
           <form 
             onSubmit={handleSearch}
-            className="flex items-center justify-center gap-3"
+            className="flex items-center justify-center gap-4"
           >
             <input 
               type="text" 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search anything..."
-              className="w-[60%] px-4 py-3 bg-white border border-[#ddd] rounded-3xl text-[16px] outline-none shadow-[0_2px_5px_rgba(0,0,0,0.1)]"
+              className="glass-input flex-1 px-5 py-4 rounded-3xl text-[16px]"
               autoFocus
             />
             
@@ -68,66 +69,82 @@ function App() {
               max="100" 
               value={k}
               onChange={(e) => setK(e.target.value)}
-              className="w-[80px] px-3 py-3 bg-white text-center rounded-3xl border border-[#ddd] outline-none"
+              className="glass-input w-[90px] px-3 py-4 text-center rounded-3xl text-[16px]"
+              title="Number of results"
             />
             
             <button 
               type="submit"
               disabled={loading || !query.trim()}
-              className="px-5 py-3 bg-[#1a73e8] hover:bg-[#1558b0] text-white text-[16px] rounded-3xl transition-colors disabled:opacity-50"
+              className="glass-button px-8 py-4 text-[16px] font-medium rounded-3xl"
             >
-              {loading ? "Searching..." : "Search"}
+              Search
             </button>
           </form>
         </div>
 
         {/* Status / Errors */}
         {error && (
-          <div className="m-4 text-[#555] text-center">
-            <span className="font-medium text-red-500">{error}</span>
+          <div className="m-4 text-center">
+            <span className="font-medium text-red-400">{error}</span>
           </div>
         )}
 
         {searchTime !== null && !loading && (
-          <div className="m-4 text-[#555] text-center">
+          <div className="mb-6 text-slate-300 text-center opacity-80">
             Found {results.length} results in {searchTime.toFixed(2)}ms
           </div>
         )}
 
         {/* Results List */}
-        <div className="text-left">
-          {results.map((r, i) => (
+        <div className="text-left space-y-4">
+          
+          {loading && (
+            // Skeleton Loading Animation
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="glass-panel rounded-xl p-5">
+                  <div className="skeleton-box h-6 w-3/4 mb-3"></div>
+                  <div className="skeleton-box h-4 w-1/4 mb-4"></div>
+                  <div className="skeleton-box h-4 w-full mb-2"></div>
+                  <div className="skeleton-box h-4 w-5/6"></div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && results.map((r, i) => (
             <div 
               key={`${r.doc_id}-${i}`}
-              className="bg-white rounded-xl p-4 mb-3 shadow-[0_2px_6px_rgba(0,0,0,0.1)]"
+              className="glass-panel rounded-xl p-5 hover:bg-white/10 transition-colors duration-300"
             >
-              <div className="mb-1">
+              <div className="mb-2">
                 <a 
                   href={r.url || '#'}
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-[18px] font-bold text-[#1a73e8] hover:underline"
+                  className="text-[20px] font-semibold text-blue-400 hover:text-blue-300 transition-colors"
                 >
                   {r.title || "Untitled Document"}
                 </a>
               </div>
               
-              <div className="text-[14px] text-[#555] mb-2">
-                <span className="font-bold text-[#1a73e8] mr-3">ID: {r.doc_id}</span>
+              <div className="text-[13px] text-slate-400 mb-3 flex gap-4">
+                <span className="font-mono bg-white/10 px-2 py-0.5 rounded text-slate-300">ID: {r.doc_id}</span>
                 {r.score !== undefined && (
-                  <span>Score: {parseFloat(r.score).toFixed(4)}</span>
+                  <span className="font-mono bg-white/10 px-2 py-0.5 rounded text-slate-300">Score: {parseFloat(r.score).toFixed(4)}</span>
                 )}
               </div>
               
-              <div className="text-[#444] text-[15px] mt-[6px]">
+              <div className="text-slate-200 text-[15px] leading-relaxed">
                 <p>{r.snippet || "No snippet available."}</p>
               </div>
             </div>
           ))}
           
           {!loading && !error && searchTime !== null && results.length === 0 && (
-            <div className="text-center py-20 text-slate-500 animate-fade-in">
-              <svg className="w-16 h-16 mx-auto mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center py-20 text-slate-400 animate-fade-in">
+              <svg className="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <p className="text-lg">No results found for your query.</p>
