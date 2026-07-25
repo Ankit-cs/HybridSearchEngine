@@ -42,8 +42,15 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 - **Graph Expansion Retrieval**: LightGBM uses a `graph_support_score` derived from 1-hop network expansions to boost documents connected to query entities.
 - **Retrieval Inspector**: A dedicated `/api/v1/search/explain` endpoint and UI widget that provides transparent visual breakdowns of BM25, Semantic, and Graph scores for every search result.
 - **Interactive Graph Explorer**: A `react-force-graph` based UI tab to visualize and explore the Knowledge Graph in 2D space.
-- **Generative AI Summary**: A Perplexity-style generative RAG endpoint (`/api/v1/search/generate`) that synthesizes an answer with inline document citations `[1]`.
+- **Generative AI Summary**: A Perplexity-style generative RAG endpoint (`/api/v1/search/generate`) that synthesizes an answer with structured JSON inline document citations (`[1]`).
 - **Automated Benchmark Harness**: `eval_benchmark.py` quantitatively proves Hybrid GraphRAG outperforms Vector-only retrieval using MRR and NDCG@10 metrics.
+
+### Enterprise RAG Enhancements
+- **Multi-Modal Vision Search**: Ingest images (`.png`, `.jpg`, `.webp`) and use Gemini 1.5 Flash Vision to automatically describe charts/graphs/text, making them fully searchable alongside text documents.
+- **Enterprise Document Loaders**: Native parsers for **PDFs** (`pypdf`), **HTML** (skipping scripts/styles), and **Markdown/TXT** with whitespace normalization.
+- **Semantic Token Chunking**: Uses OpenAI's `tiktoken` to count actual LLM tokens. Implements recursive semantic splitting (paragraphs → sentences) with a 512 max token size and 64 token overlap to prevent context loss.
+- **RAGAS Evaluator (LLM-as-Judge)**: `scripts/eval_ragas.py` quantitatively proves generative answer accuracy by evaluating 4 core RAGAS metrics: Faithfulness, Context Relevance, Context Recall, and Answer Relevance.
+- **Structured Citations**: The React frontend maps structured JSON citations returned by the LLM into clickable source chips.
 
 ### Agentic AI Layer (`/api/v1/agent/smart`)
 - **Multi-LLM Support** via `litellm` (Groq / OpenAI / Gemini — auto-detected from `.env`)
