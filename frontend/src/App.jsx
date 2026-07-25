@@ -1,11 +1,15 @@
 import { useState, useRef, useEffect } from "react";
+import GraphExplorer from "./GraphExplorer";
 
 function App() {
   const [query, setQuery] = useState("");
   const [k, setK] = useState(10);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [explainMode, setExplainMode] = useState(false);
+  const [activeTab, setActiveTab] = useState('search');
   const [error, setError] = useState("");
   const [searchTime, setSearchTime] = useState(null);
 
@@ -16,9 +20,27 @@ function App() {
     if (!query.trim()) return;
 
     setLoading(true);
+    setAiLoading(true);
     setError("");
     setResults([]);
+    setAiSummary(null);
     setSearchTime(null);
+
+    // Concurrently fetch generative answer
+    const fetchSummary = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/v1/search/generate?q=${encodeURIComponent(query)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAiSummary(data.answer);
+        }
+      } catch (err) {
+        console.error("AI Generate Error:", err);
+      } finally {
+        setAiLoading(false);
+      }
+    };
+    fetchSummary();
 
     try {
       const endpoint = explainMode ? '/api/v1/search/explain' : '/api/v1/search';
@@ -49,8 +71,26 @@ function App() {
           <p className="text-slate-300 opacity-80">Next-gen Hybrid Search Engine</p>
         </div>
 
-        {/* Search Bar Container */}
-        <div className="max-w-3xl mx-auto mb-10">
+        {/* Tabs */}
+        <div className="flex justify-center mb-8 gap-4">
+          <button 
+            onClick={() => setActiveTab('search')}
+            className={`px-6 py-2 rounded-full font-medium transition-all ${activeTab === 'search' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' : 'glass-panel text-slate-300 hover:text-white'}`}
+          >
+            Hybrid Search
+          </button>
+          <button 
+            onClick={() => setActiveTab('graph')}
+            className={`px-6 py-2 rounded-full font-medium transition-all ${activeTab === 'graph' ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30' : 'glass-panel text-slate-300 hover:text-white'}`}
+          >
+            Knowledge Graph Explorer
+          </button>
+        </div>
+
+        {activeTab === 'search' ? (
+          <>
+            {/* Search Bar Container */}
+            <div className="max-w-3xl mx-auto mb-10">
           <form 
             onSubmit={handleSearch}
             className="flex items-center justify-center gap-4"
@@ -102,14 +142,41 @@ function App() {
           </div>
         )}
 
-        {searchTime !== null && !loading && (
-          <div className="mb-6 text-slate-300 text-center opacity-80">
-            Found {results.length} results in {searchTime.toFixed(2)}ms
-          </div>
-        )}
+          {searchTime !== null && !loading && (
+            <div className="mb-6 text-slate-300 text-center opacity-80">
+              Found {results.length} results in {searchTime.toFixed(2)}ms
+            </div>
+          )}
+          
+          {/* AI Summary Box */}
+          {(aiLoading || aiSummary) && (
+            <div className="mb-8 p-6 rounded-xl bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
+              <h3 className="text-lg font-semibold text-indigo-300 mb-3 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                AI Summary
+              </h3>
+              {aiLoading ? (
+                <div className="space-y-2 animate-pulse">
+                  <div className="h-4 bg-indigo-800/50 rounded w-full"></div>
+                  <div className="h-4 bg-indigo-800/50 rounded w-5/6"></div>
+                  <div className="h-4 bg-indigo-800/50 rounded w-4/6"></div>
+                </div>
+              ) : (
+                <div className="text-slate-200 leading-relaxed text-[15px]">
+                  {/* Format citations like [1] to be highlighted */}
+                  {aiSummary.split(/(\[\d+\])/g).map((part, idx) => {
+                    if (part.match(/\[\d+\]/)) {
+                      return <span key={idx} className="inline-block bg-indigo-500/30 text-indigo-200 px-1.5 py-0.5 rounded text-xs ml-1 font-mono">{part}</span>;
+                    }
+                    return part;
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* Results List */}
-        <div className="text-left space-y-4">
+          {/* Results List */}
+          <div className="text-left space-y-4">
           
           {loading && (
             // Skeleton Loading Animation
@@ -202,6 +269,10 @@ function App() {
             </div>
           )}
         </div>
+        </>
+        ) : (
+          <GraphExplorer />
+        )}
 
       </div>
 
