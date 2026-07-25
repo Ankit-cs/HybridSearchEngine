@@ -41,6 +41,9 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 - **LLM-Driven Graph ETL**: Extracts entities and relationships from indexed chunks to build a local Knowledge Graph.
 - **Graph Expansion Retrieval**: LightGBM uses a `graph_support_score` derived from 1-hop network expansions to boost documents connected to query entities.
 - **Retrieval Inspector**: A dedicated `/api/v1/search/explain` endpoint and UI widget that provides transparent visual breakdowns of BM25, Semantic, and Graph scores for every search result.
+- **Interactive Graph Explorer**: A `react-force-graph` based UI tab to visualize and explore the Knowledge Graph in 2D space.
+- **Generative AI Summary**: A Perplexity-style generative RAG endpoint (`/api/v1/search/generate`) that synthesizes an answer with inline document citations `[1]`.
+- **Automated Benchmark Harness**: `eval_benchmark.py` quantitatively proves Hybrid GraphRAG outperforms Vector-only retrieval using MRR and NDCG@10 metrics.
 
 ### Agentic AI Layer (`/api/v1/agent/smart`)
 - **Multi-LLM Support** via `litellm` (Groq / OpenAI / Gemini — auto-detected from `.env`)
