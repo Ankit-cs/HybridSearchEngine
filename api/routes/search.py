@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 import time
 from src.utils.snippet import generate_snippet
+from src.query.distributed import scatter_gather_search
 
 from api.deps import get_engine
 from api.schemas.search import SearchRequest, SearchResponse, SearchResult
@@ -19,13 +20,19 @@ def search(
     if not params.q.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    results = engine.search(
-        params.q, params.k,
-        agent_id=params.agent_id,
-        column_filter=params.column_filter,
-        use_fts=params.use_fts,
-        use_dual=params.use_dual,
-    )
+    search_kwargs = {
+        "agent_id": params.agent_id,
+        "column_filter": params.column_filter,
+        "use_fts": params.use_fts,
+        "use_dual": params.use_dual,
+        "profile": params.profile
+    }
+
+    if params.profile:
+        results, profile_data = engine.search(params.q, params.k, **search_kwargs)
+    else:
+        results = engine.search(params.q, params.k, **search_kwargs)
+        profile_data = None
 
     response_results = []
     for doc_id, score in results:
@@ -48,6 +55,7 @@ def search(
         k=params.k,
         took_ms=round((time.time() - start) * 1000, 2),
         results=response_results,
+        profile_data=profile_data
     )
 
 
@@ -103,7 +111,11 @@ def search_dual(
     if not params.q.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    results = engine.search(params.q, params.k, use_dual=True)
+    if params.profile:
+        results, profile_data = engine.search(params.q, params.k, use_dual=True, profile=True)
+    else:
+        results = engine.search(params.q, params.k, use_dual=True)
+        profile_data = None
 
     response_results = []
     for doc_id, score in results:
@@ -126,6 +138,7 @@ def search_dual(
         k=params.k,
         took_ms=round((time.time() - start) * 1000, 2),
         results=response_results,
+        profile_data=profile_data
     )
 
 
@@ -161,4 +174,41 @@ def search_fts(
         k=params.k,
         took_ms=round((time.time() - start) * 1000, 2),
         results=response_results,
+    )
+
+@router.get("/search/distributed", response_model=SearchResponse)
+async def search_distributed(
+    params: SearchRequest = Depends(),
+    workers: str = Query(..., description="Comma-separated list of worker URLs (e.g., http://node1:8000,http://node2:8000)")
+):
+    start = time.time()
+
+    if not params.q.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+    worker_urls = [w.strip() for w in workers.split(",") if w.strip()]
+    if not worker_urls:
+        raise HTTPException(status_code=400, detail="No valid worker URLs provided")
+
+    search_kwargs = {
+        "agent_id": params.agent_id,
+        "column_filter": params.column_filter,
+        "use_fts": params.use_fts,
+        "use_dual": params.use_dual,
+        "profile": params.profile
+    }
+
+    results = await scatter_gather_search(
+        params.q, params.k, worker_urls, **search_kwargs
+    )
+    
+    # Note: When using scatter-gather, profiling metrics are node-specific and 
+    # not easily aggregated at the coordinator level, so we omit profile_data here.
+
+    return SearchResponse(
+        query=params.q,
+        k=params.k,
+        took_ms=round((time.time() - start) * 1000, 2),
+        results=results,
+        profile_data=None
     )
