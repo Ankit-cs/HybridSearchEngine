@@ -143,9 +143,14 @@ class SearchEngine:
 
     def search(self, query, top_k=10, agent_id: str = None,
                column_filter: dict = None, use_fts: bool = False,
-               use_dual: bool = False, max_tokens: int = 4000):
+               use_dual: bool = False, max_tokens: int = 4000, profile: bool = False):
+        
+        profile_data = {}
+        t_start = time.perf_counter()
 
         tokens = parse_query(query)
+
+        t_retrieval_start = time.perf_counter()
 
         if use_fts and self.fts_index.term_count > 0:
             fts_results = self.fts_index.search(tokens, top_k=top_k * 3)
@@ -165,6 +170,9 @@ class SearchEngine:
 
         if column_filter:
             ranked = self._apply_column_filter(ranked, column_filter)
+            
+        profile_data['initial_retrieval_ms'] = round((time.perf_counter() - t_retrieval_start) * 1000, 2)
+        t_expansion_start = time.perf_counter()
 
         expanded_query = self.query_expander.expand(query, ranked[:20])
         tokens = parse_query(expanded_query)
@@ -172,6 +180,7 @@ class SearchEngine:
         ranked = sort_by_fixed_point(list(scores.items()))
 
         if use_dual and self.dual_store.content_index is not None:
+            t_dual_start = time.perf_counter()
             from src.semantic.embedding_model import EmbeddingModel
             model = EmbeddingModel()
             query_emb = model.encode(query)[0]
@@ -182,15 +191,21 @@ class SearchEngine:
             for i, (doc_id, score) in enumerate(ranked):
                 dual_boost = dual_scored.get(doc_id, 0.0)
                 ranked[i] = (doc_id, score + dual_boost * 0.3)
+            profile_data['dual_embedding_ms'] = round((time.perf_counter() - t_dual_start) * 1000, 2)
+        else:
+            profile_data['query_expansion_ms'] = round((time.perf_counter() - t_expansion_start) * 1000, 2)
 
         if self.semantic_enabled and self.reranker:
+            t_semantic_start = time.perf_counter()
             candidates = ranked[:50]
             try:
                 ranked = self.reranker.rerank(query, candidates)
+                profile_data['semantic_rerank_ms'] = round((time.perf_counter() - t_semantic_start) * 1000, 2)
             except Exception as e:
                 print("[RRF] Semantic reranking failed:", e)
 
         try:
+            t_ltr_start = time.perf_counter()
             rrf_top = ranked[:20]
             bm25_scores = self.ranker.score(tokens)
             rrf_with_bm25 = [
@@ -198,10 +213,12 @@ class SearchEngine:
                 for doc_id, _ in rrf_top
             ]
             ranked = self.ltr_ranker.rerank(query, tokens, rrf_with_bm25)
+            profile_data['ltr_rerank_ms'] = round((time.perf_counter() - t_ltr_start) * 1000, 2)
         except Exception as e:
             print("[LTR] LightGBM re-rank failed, keeping RRF order:", e)
 
         if agent_id:
+            t_agent_start = time.perf_counter()
             agent_store = self.agent_partitions.get_partition(agent_id)
             if agent_store.count() > 0:
                 from src.semantic.embedding_model import EmbeddingModel
@@ -222,6 +239,7 @@ class SearchEngine:
                         else:
                             boosted.append((doc_id, score))
                     ranked = sort_by_fixed_point(boosted)
+            profile_data['agent_memory_ms'] = round((time.perf_counter() - t_agent_start) * 1000, 2)
 
         if self.working_memory.size() > 0:
             from src.semantic.embedding_model import EmbeddingModel
@@ -236,7 +254,11 @@ class SearchEngine:
                         if wm_text in doc.get("text", ""):
                             ranked = [(d, s * 1.1 if d == doc_id else s) for d, s in ranked]
                             break
+        
+        profile_data['total_search_ms'] = round((time.perf_counter() - t_start) * 1000, 2)
 
+        if profile:
+            return ranked[:top_k], profile_data
         return ranked[:top_k]
 
     def search_as_context(self, query: str, top_k: int = 10,
