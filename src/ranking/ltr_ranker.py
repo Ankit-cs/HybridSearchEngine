@@ -19,10 +19,11 @@ DEFAULT_MODEL_PATH = "models/ltr_model.pkl"
 
 
 class LightGBMRanker:
-    def __init__(self, embedding_store, doc_store, metadata, index_reader=None, model_path=None):
+    def __init__(self, embedding_store, doc_store, metadata, index_reader=None, model_path=None, graph_retriever=None):
         self.embedding_store = embedding_store
         self.doc_store = doc_store
         self.index_reader = index_reader
+        self.graph_retriever = graph_retriever
         self.total_docs = metadata.get("total_docs", 0)
         self.avg_doc_length = metadata.get("avg_doc_length", 400)
 
@@ -50,11 +51,13 @@ class LightGBMRanker:
             return []
 
         max_bm25 = max(score for _, score in candidates) or 1.0
+        graph_scores = self.graph_retriever.score(query_tokens) if self.graph_retriever else {}
 
         # Build feature matrix
         feature_matrix = []
         doc_ids = []
         for doc_id, bm25_score in candidates:
+            g_score = graph_scores.get(str(doc_id), 0.0)
             features = extract_features(
                 query=query,
                 query_tokens=query_tokens,
@@ -65,7 +68,8 @@ class LightGBMRanker:
                 doc_store=self.doc_store,
                 avg_doc_length=self.avg_doc_length,
                 index_reader=self.index_reader,
-                total_docs=self.total_docs
+                total_docs=self.total_docs,
+                graph_score=g_score
             )
             feature_matrix.append(features)
             doc_ids.append(doc_id)
