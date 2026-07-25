@@ -12,6 +12,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('search');
   const [error, setError] = useState("");
   const [searchTime, setSearchTime] = useState(null);
+  const [profileData, setProfileData] = useState(null);
 
   const API_BASE_URL = 'http://localhost:8000';
 
@@ -25,6 +26,7 @@ function App() {
     setResults([]);
     setAiSummary(null);
     setSearchTime(null);
+    setProfileData(null);
 
     // Concurrently fetch generative answer
     const fetchSummary = async () => {
@@ -44,13 +46,14 @@ function App() {
 
     try {
       const endpoint = explainMode ? '/api/v1/search/explain' : '/api/v1/search';
-      const response = await fetch(`${API_BASE_URL}${endpoint}?q=${encodeURIComponent(query)}&k=${k}`);
+      const response = await fetch(`${API_BASE_URL}${endpoint}?q=${encodeURIComponent(query)}&k=${k}&profile=true`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
       setResults(data.results || []);
       setSearchTime(data.took_ms);
+      setProfileData(data.profile_data || null);
     } catch (err) {
       console.error("Search error:", err);
       setError("Failed to connect to the search engine. Is the backend running?");
@@ -64,11 +67,11 @@ function App() {
       <div className="max-w-4xl mx-auto px-4 py-12">
         
         {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-[52px] font-bold mb-4 gradient-text">
+        <div className="text-center mb-8 md:mb-10">
+          <h1 className="text-4xl md:text-[52px] font-bold mb-4 gradient-text leading-tight">
             AstraSearch
           </h1>
-          <p className="text-slate-300 opacity-80">Next-gen Hybrid Search Engine</p>
+          <p className="text-slate-300 opacity-80 text-sm md:text-base">Next-gen Hybrid Search Engine</p>
         </div>
 
         {/* Tabs */}
@@ -93,37 +96,39 @@ function App() {
             <div className="max-w-3xl mx-auto mb-10">
           <form 
             onSubmit={handleSearch}
-            className="flex items-center justify-center gap-4"
+            className="flex flex-col md:flex-row items-center justify-center gap-4"
           >
             <input 
               type="text" 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search anything..."
-              className="glass-input flex-1 px-5 py-4 rounded-3xl text-[16px]"
+              className="glass-input w-full md:flex-1 px-5 py-4 rounded-3xl text-[16px]"
               autoFocus
             />
             
-            <input 
-              id="k-val"
-              type="number" 
-              min="1" 
-              max="100" 
-              value={k}
-              onChange={(e) => setK(e.target.value)}
-              className="glass-input w-[90px] px-3 py-4 text-center rounded-3xl text-[16px]"
-              title="Number of results"
-            />
-            
-            <button 
-              type="submit"
-              disabled={loading || !query.trim()}
-              className="glass-button px-8 py-4 text-[16px] font-medium rounded-3xl"
-            >
-              Search
-            </button>
+            <div className="flex w-full md:w-auto gap-4">
+              <input 
+                id="k-val"
+                type="number" 
+                min="1" 
+                max="100" 
+                value={k}
+                onChange={(e) => setK(e.target.value)}
+                className="glass-input flex-1 md:w-[90px] px-3 py-4 text-center rounded-3xl text-[16px]"
+                title="Number of results"
+              />
+              
+              <button 
+                type="submit"
+                disabled={loading || !query.trim()}
+                className="glass-button flex-1 md:w-auto px-8 py-4 text-[16px] font-medium rounded-3xl"
+              >
+                Search
+              </button>
+            </div>
           </form>
-          <div className="flex justify-center items-center mt-4 gap-2 text-sm text-slate-300">
+          <div className="flex justify-center items-center mt-6 gap-2 text-sm text-slate-300">
             <input 
               type="checkbox" 
               id="explain-mode" 
@@ -147,16 +152,64 @@ function App() {
               Found {results.length} results in {searchTime.toFixed(2)}ms
             </div>
           )}
+
+          {/* Profiling Metrics Dashboard */}
+          {profileData && !loading && (
+            <div className="mb-8 p-4 md:p-6 rounded-xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700/50 shadow-lg shadow-black/20 animate-fade-in-down">
+              <h2 className="text-lg font-semibold text-blue-300 mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Metrics Icon"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                Engine Profiling Metrics
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {profileData.initial_retrieval_ms !== undefined && (
+                  <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1 uppercase tracking-wider">Initial Retrieval</div>
+                    <div className="text-lg font-mono text-emerald-300">{profileData.initial_retrieval_ms}ms</div>
+                  </div>
+                )}
+                {profileData.query_expansion_ms !== undefined && (
+                  <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1 uppercase tracking-wider">Query Expansion</div>
+                    <div className="text-lg font-mono text-emerald-300">{profileData.query_expansion_ms}ms</div>
+                  </div>
+                )}
+                {profileData.semantic_rerank_ms !== undefined && (
+                  <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1 uppercase tracking-wider">Semantic Rerank</div>
+                    <div className="text-lg font-mono text-purple-300">{profileData.semantic_rerank_ms}ms</div>
+                  </div>
+                )}
+                {profileData.ltr_rerank_ms !== undefined && (
+                  <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1 uppercase tracking-wider">LTR Rerank</div>
+                    <div className="text-lg font-mono text-indigo-300">{profileData.ltr_rerank_ms}ms</div>
+                  </div>
+                )}
+                {profileData.agent_memory_ms !== undefined && (
+                  <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/30">
+                    <div className="text-xs text-slate-400 mb-1 uppercase tracking-wider">Agent Memory</div>
+                    <div className="text-lg font-mono text-pink-300">{profileData.agent_memory_ms}ms</div>
+                  </div>
+                )}
+                {profileData.total_search_ms !== undefined && (
+                  <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/30 md:col-span-2">
+                    <div className="text-xs text-slate-400 mb-1 uppercase tracking-wider">Total Pipeline Time</div>
+                    <div className="text-xl font-mono text-white font-bold">{profileData.total_search_ms}ms</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           
           {/* AI Summary Box */}
           {(aiLoading || aiSummary) && (
-            <div className="mb-8 p-6 rounded-xl bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
-              <h3 className="text-lg font-semibold text-indigo-300 mb-3 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            <div className="mb-8 p-4 md:p-6 rounded-xl bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
+              <h2 className="text-lg font-semibold text-indigo-300 mb-3 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="AI Sparkles"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 AI Summary
-              </h3>
+              </h2>
               {aiLoading ? (
-                <div className="space-y-2 animate-pulse">
+                <div className="space-y-2 animate-pulse" aria-label="Loading AI Summary">
                   <div className="h-4 bg-indigo-800/50 rounded w-full"></div>
                   <div className="h-4 bg-indigo-800/50 rounded w-5/6"></div>
                   <div className="h-4 bg-indigo-800/50 rounded w-4/6"></div>
@@ -173,7 +226,7 @@ function App() {
                   </div>
                   {aiSummary?.citations && aiSummary.citations.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-indigo-500/30">
-                      <h4 className="text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-2">Sources</h4>
+                      <h3 className="text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-2">Sources</h3>
                       <div className="flex flex-wrap gap-2">
                         {aiSummary.citations.map((c, i) => (
                           <button key={i} className="text-xs bg-indigo-900/50 hover:bg-indigo-800/50 border border-indigo-500/30 rounded px-2 py-1 text-indigo-200 transition-colors text-left" title={c.text}>
@@ -221,7 +274,7 @@ function App() {
                 </a>
               </div>
               
-              <div className="text-[13px] text-slate-400 mb-3 flex gap-4">
+              <div className="text-[13px] text-slate-400 mb-3 flex flex-wrap gap-2 md:gap-4">
                 <span className="font-mono bg-white/10 px-2 py-0.5 rounded text-slate-300">ID: {r.doc_id}</span>
                 {r.score !== undefined && (
                   <span className="font-mono bg-white/10 px-2 py-0.5 rounded text-slate-300">Score: {parseFloat(r.score).toFixed(4)}</span>
@@ -234,7 +287,7 @@ function App() {
 
               {r.components && (
                 <div className="mt-4 p-4 rounded-xl bg-black/20 border border-white/5">
-                  <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Retrieval Inspector Breakdown</h4>
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Retrieval Inspector Breakdown</h3>
                   
                   {/* BM25 */}
                   <div className="mb-2">
@@ -275,7 +328,7 @@ function App() {
           
           {!loading && !error && searchTime !== null && results.length === 0 && (
             <div className="text-center py-20 text-slate-400 animate-fade-in">
-              <svg className="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="No results icon">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <p className="text-lg">No results found for your query.</p>
