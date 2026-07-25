@@ -31,3 +31,5 @@ google-cloud-storage
 # Utilities
 dataclasses
 uuid6
+
+aiohttp

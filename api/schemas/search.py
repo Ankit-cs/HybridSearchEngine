@@ -9,6 +9,7 @@ class SearchRequest(BaseModel):
     use_fts: bool = Field(False, description="Use persistent FTS index")
     use_dual: bool = Field(False, description="Use dual embeddings (content + context)")
     max_tokens: int = Field(4000, description="Max tokens for context assembly")
+    profile: bool = Field(False, description="Return detailed EXPLAIN ANALYZE profiling metrics")
 
 class SearchResult(BaseModel):
     doc_id: int
@@ -22,3 +23,4 @@ class SearchResponse(BaseModel):
     k: int
     took_ms: float
     results: list[SearchResult]
+    profile_data: Optional[dict] = None
