@@ -27,6 +27,7 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 
 
 ### Learning-to-Rank (LightGBM LTR)
+- **Hard Negative Sampling**: Uses both BM25 and Semantic retrieval during training to find challenging negatives, forcing the model to learn fine-grained distinctions.
 - **LambdaMART gradient boosting model** trained on India-specific queries
 - **Automated Hyperparameter Tuning**: Uses Optuna to dynamically find the optimal learning rate, tree depth, and estimators.
 - **Robust Generalization**: Implements an 80/20 Train/Validation Split with Early Stopping to prevent overfitting.
@@ -48,7 +49,7 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 - Core `/api/v1/search` remains untouched and millisecond-fast
 
 ### Data Support
-- Multi-parser support (XML, CSV, extensible)
+- Multi-parser support (XML, CSV, MSMARCO TSV, extensible)
 - Automatic parser detection
 
 ### System Design
@@ -136,6 +137,8 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 - **Preceding/Following Context** — enriches chunks with surrounding text
 
 ### API + UI
+- **Modern Glassmorphism UI**: Premium React (Vite) frontend with frosted glass panels, animated gradient backgrounds, and responsive design.
+- **Real-time Loading Animations**: Skeleton loaders and visual feedback during latency-heavy agentic search paths.
 - FastAPI backend
 - Fast search endpoint (`/api/v1/search`)
 - Context assembly endpoint (`/api/v1/search/context`)
