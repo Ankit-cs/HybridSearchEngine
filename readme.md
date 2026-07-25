@@ -461,6 +461,16 @@ curl http://localhost:8000/health
 curl "http://localhost:8000/api/v1/search?q=Gandhi&k=5"
 ```
 
+**Search with Profiling (EXPLAIN ANALYZE):**
+```bash
+curl "http://localhost:8000/api/v1/search?q=Gandhi&k=5&profile=true"
+```
+
+**Distributed Search (Scatter-Gather):**
+```bash
+curl "http://localhost:8000/api/v1/search/distributed?q=Gandhi&k=5&workers=http://node1:8000,http://node2:8000"
+```
+
 **Search with Dual Embeddings:**
 ```bash
 curl "http://localhost:8000/api/v1/search/dual?q=Indian+independence&k=10"
@@ -513,7 +523,8 @@ curl "http://localhost:8000/api/v1/agent/schema/columns"
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check |
-| `/api/v1/search` | GET | Basic hybrid search (BM25 + Semantic) |
+| `/api/v1/search` | GET | Basic hybrid search (BM25 + Semantic). Use `?profile=true` for latency metrics. |
+| `/api/v1/search/distributed` | GET | Multi-node scatter-gather search via `workers` query param |
 | `/api/v1/search/context` | GET | Search + LLM context assembly |
 | `/api/v1/search/dual` | GET | Dual embedding search (content + context) |
 | `/api/v1/search/fts` | GET | Full-text search with FTS index |
@@ -598,6 +609,8 @@ logs/app.log
 - **LLM Context Assembly** (token-limited, deduplicated context from search results)
 - **Hardware-Agnostic Ranking Consistency** (Fixed-point reductions to guarantee deterministic sorting across architectures)
 - **50-Dimension LTR Feature Vector** (MSMARCO-style TF-IDF aggregations and positional metrics for LightGBM)
+- **EXPLAIN ANALYZE Profiling** (fine-grained latency tracking for retrieval and ranking stages)
+- **Multi-Node Distributed Search** (asynchronous scatter-gather coordinator for sharded indices)
 
 ---
 
