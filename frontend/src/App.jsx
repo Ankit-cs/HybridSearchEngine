@@ -32,7 +32,7 @@ function App() {
         const res = await fetch(`${API_BASE_URL}/api/v1/search/generate?q=${encodeURIComponent(query)}`);
         if (res.ok) {
           const data = await res.json();
-          setAiSummary(data.answer);
+          setAiSummary({ answer: data.answer, citations: data.citations });
         }
       } catch (err) {
         console.error("AI Generate Error:", err);
@@ -162,15 +162,28 @@ function App() {
                   <div className="h-4 bg-indigo-800/50 rounded w-4/6"></div>
                 </div>
               ) : (
-                <div className="text-slate-200 leading-relaxed text-[15px]">
-                  {/* Format citations like [1] to be highlighted */}
-                  {aiSummary.split(/(\[\d+\])/g).map((part, idx) => {
-                    if (part.match(/\[\d+\]/)) {
-                      return <span key={idx} className="inline-block bg-indigo-500/30 text-indigo-200 px-1.5 py-0.5 rounded text-xs ml-1 font-mono">{part}</span>;
-                    }
-                    return part;
-                  })}
-                </div>
+                <>
+                  <div className="text-slate-200 leading-relaxed text-[15px]">
+                    {aiSummary?.answer?.split(/(\[\d+\])/g).map((part, idx) => {
+                      if (part.match(/\[\d+\]/)) {
+                        return <span key={idx} className="inline-block bg-indigo-500/30 text-indigo-200 px-1.5 py-0.5 rounded text-xs ml-1 font-mono">{part}</span>;
+                      }
+                      return part;
+                    })}
+                  </div>
+                  {aiSummary?.citations && aiSummary.citations.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-indigo-500/30">
+                      <h4 className="text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-2">Sources</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {aiSummary.citations.map((c, i) => (
+                          <button key={i} className="text-xs bg-indigo-900/50 hover:bg-indigo-800/50 border border-indigo-500/30 rounded px-2 py-1 text-indigo-200 transition-colors text-left" title={c.text}>
+                            <span className="font-mono text-indigo-400 mr-1">[{c.id}]</span> {c.source}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
