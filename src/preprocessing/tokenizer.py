@@ -3,15 +3,14 @@ from .stopwords import STOPWORDS
 # Initialize Gigatoken BPE tokenizer globally to avoid reloading
 try:
     import tiktoken
-    import gigatoken as gt
     
     # Load modern OpenAI tokenizer (cl100k_base)
     _tik_tok = tiktoken.get_encoding("cl100k_base")
-    _gt_tokenizer = gt.Tokenizer(_tik_tok).as_tiktoken()
+    _gt_tokenizer = _tik_tok
 except ImportError:
     _gt_tokenizer = None
     _tik_tok = None
-    print("Warning: gigatoken or tiktoken not installed. Falling back to basic .split()")
+    print("Warning: tiktoken not installed. Falling back to basic .split()")
 
 
 def tokenize(text: str) -> list[str]:
