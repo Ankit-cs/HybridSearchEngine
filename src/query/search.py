@@ -8,8 +8,8 @@ from src.storage.index_reader import IndexReader
 from src.storage.document_store import DocumentStore
 from src.storage.catalog import Catalog
 from src.storage.acid import TransactionManager, CompactionPlanner
-from src.storage.schema import ContextAssembler, SchemaEvolver
 from src.storage.time_travel import TimeTravelManager
+from src.graph.retrieval import GraphRetriever
 
 from src.ranking.tfidf import TFIDFRanker
 from src.ranking.bm25 import BM25Ranker
@@ -85,12 +85,14 @@ class SearchEngine:
                 self.index_reader,
                 metadata["total_docs"]
             )
+        self.graph_retriever = GraphRetriever(str(INDEX_DIR))
 
         self.ltr_ranker = LightGBMRanker(
             embedding_store=self.embedding_store,
             doc_store=self.doc_store,
             metadata=metadata,
             index_reader=self.index_reader,
+            graph_retriever=self.graph_retriever,
         )
 
         self.query_expander = QueryExpander(
@@ -256,6 +258,47 @@ class SearchEngine:
                 }
                 chunks.append(chunk)
         return self.context_assembler.assemble(chunks, max_tokens=max_tokens)
+
+    def explain_search(self, query: str, top_k: int = 10, agent_id: str = None) -> list:
+        ranked = self.search(query, top_k=top_k, agent_id=agent_id)
+        
+        tokens = parse_query(query)
+        bm25_scores = self.ranker.score(tokens)
+        graph_scores = self.graph_retriever.score(tokens)
+        
+        from src.semantic.embedding_model import EmbeddingModel
+        from sentence_transformers import util
+        model = EmbeddingModel()
+        query_emb = model.encode(query)[0]
+        
+        results = []
+        for doc_id, final_score in ranked:
+            doc = self.doc_store.get(doc_id)
+            if not doc:
+                continue
+                
+            b_score = bm25_scores.get(doc_id, 0.0)
+            g_score = graph_scores.get(str(doc_id), 0.0)
+            
+            s_score = 0.0
+            doc_emb = self.embedding_store.get(doc_id)
+            if doc_emb is not None:
+                s_score = float(util.cos_sim(query_emb, doc_emb)[0][0])
+                
+            results.append({
+                "doc_id": doc_id,
+                "title": doc.get("title", ""),
+                "url": doc.get("url", ""),
+                "text": doc.get("text", ""),
+                "final_score": final_score,
+                "components": {
+                    "bm25": b_score,
+                    "semantic": s_score,
+                    "graph": g_score
+                }
+            })
+            
+        return results
 
     def _apply_column_filter(self, ranked: list, column_filter: dict) -> list:
         column = column_filter.get("column", "")
