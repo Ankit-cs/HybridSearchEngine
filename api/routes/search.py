@@ -51,6 +51,30 @@ def search(
     )
 
 
+@router.get("/search/explain")
+def search_explain(
+    params: SearchRequest = Depends(),
+    engine = Depends(get_engine)
+):
+    start = time.time()
+    if not params.q.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+    results = engine.explain_search(
+        params.q, top_k=params.k, agent_id=params.agent_id
+    )
+    
+    # Generate snippets for each result
+    for r in results:
+        r["snippet"] = generate_snippet(r.pop("text"), params.q)
+
+    return {
+        "query": params.q,
+        "k": params.k,
+        "took_ms": round((time.time() - start) * 1000, 2),
+        "results": results
+    }
+
 @router.get("/search/context")
 def search_as_context(
     params: SearchRequest = Depends(),
