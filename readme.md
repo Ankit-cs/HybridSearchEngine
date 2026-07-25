@@ -1,4 +1,4 @@
-# AstraSearch — India-Focused Hybrid Search Engine
+# <img src="frontend/public/image.png" alt="AstraSearch Logo" width="40" height="40" align="top"> AstraSearch — India-Focused Hybrid Search Engine
 
 **AstraSearch** is a domain-specific hybrid search engine built from scratch in Python. It automatically filters large-scale Wikipedia datasets during indexing to create a specialized search engine focused exclusively on **Indian history, culture, geography, and leaders**.
 
@@ -151,6 +151,8 @@ It combines classical information retrieval (BM25) with modern semantic search, 
 ### API + UI
 - **Modern Glassmorphism UI**: Premium React (Vite) frontend with frosted glass panels, animated gradient backgrounds, and responsive design.
 - **Real-time Loading Animations**: Skeleton loaders and visual feedback during latency-heavy agentic search paths.
+- **Engine Profiling Metrics Dashboard**: Real-time tracking of search latencies (Initial Retrieval, RRF Fusion, LTR, AI generation) visually integrated directly into the frontend.
+- **SEO & Accessibility Optimized**: Semantic HTML heading structures (`<h1>` to `<h3>`), dynamic viewport scaling, and ARIA-compliant SVGs for screen-readers.
 - FastAPI backend
 - Fast search endpoint (`/api/v1/search`)
 - Context assembly endpoint (`/api/v1/search/context`)
