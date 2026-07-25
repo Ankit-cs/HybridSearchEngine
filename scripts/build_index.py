@@ -7,6 +7,7 @@ import numpy as np
 from src.semantic.embedding_model import EmbeddingModel
 from src.semantic.embedding_store import EmbeddingStore
 from src.semantic.dual_embeddings import DualEmbeddingGenerator, DualEmbeddingStore
+from src.graph.etl import GraphETL
 from src.utils.config import (
     EMBEDDINGS_PATH,
     CONTEXT_EMBEDDINGS_PATH,
@@ -56,6 +57,8 @@ def main():
                         help="Agent ID for partition isolation")
     parser.add_argument("--pq-only", action="store_true",
                         help="Extreme storage mode: discard raw vectors and store only PQ codes")
+    parser.add_argument("--use-graph-etl", action="store_true",
+                        help="Extract entities and build a local knowledge graph")
     args = parser.parse_args()
 
     source_path = args.source
@@ -82,6 +85,9 @@ def main():
     fts_index = PersistentFTSIndex(str(FTS_INDEX_DIR)) if args.use_fts else None
     geometric_pruner = GeometricPruner(str(GEOMETRIC_STATS_PATH))
     quantizer = VectorQuantizer(precision=args.precision) if args.precision != "f32" else None
+
+    graph_etl = GraphETL() if args.use_graph_etl else None
+    knowledge_graph = {"nodes": {}, "edges": []} if args.use_graph_etl else None
 
     catalog = Catalog(str(CATALOG_DB_PATH))
     snapshot = catalog.create_snapshot(f"Build from {source_path}")
@@ -158,6 +164,12 @@ def main():
         if fts_index:
             fts_index.index_document(str(doc_id), tokens)
 
+        if graph_etl:
+            relations = graph_etl.extract_relations(text[:1000]) # Extract from first 1000 chars to save tokens
+            knowledge_graph = graph_etl.merge_graphs(knowledge_graph, relations, doc_id)
+            if total_docs % 10 == 0:
+                logger.info(f"Graph ETL extracted {len(knowledge_graph['edges'])} total edges so far.")
+
         total_docs += 1
         if total_docs % 100 == 0:
             logger.info(f"Indexed {total_docs} docs")
@@ -188,6 +200,12 @@ def main():
     write_index(index, INVERTED_INDEX_PATH)
     write_index(title_index, TITLE_INDEX_PATH)
     doc_store.save(DOCUMENT_STORE_PATH)
+
+    if graph_etl:
+        graph_path = INDEX_DIR / "graph.json"
+        with open(graph_path, "w", encoding="utf-8") as f:
+            json.dump(knowledge_graph, f, indent=2)
+        logger.info(f"Saved Knowledge Graph with {len(knowledge_graph['nodes'])} nodes and {len(knowledge_graph['edges'])} edges.")
 
     avg_doc_length = total_length / total_docs if total_docs else 0
     metadata = {
