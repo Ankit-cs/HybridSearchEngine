@@ -1,5 +1,6 @@
 import json
 import time
+from pathlib import Path
 from src.semantic.embedding_store import EmbeddingStore
 from src.semantic.reranker import SemanticReranker
 
@@ -7,6 +8,7 @@ from src.query.query_parser import parse_query
 from src.storage.index_reader import IndexReader
 from src.storage.document_store import DocumentStore
 from src.storage.catalog import Catalog
+from src.storage.schema import SchemaEvolver, ContextAssembler
 from src.storage.acid import TransactionManager, CompactionPlanner
 from src.storage.time_travel import TimeTravelManager
 from src.graph.retrieval import GraphRetriever
