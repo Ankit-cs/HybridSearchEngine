@@ -27,7 +27,7 @@ def compute_idf(term, index_reader, total_docs):
 
 def extract_features(query, query_tokens, doc_id, bm25_score, max_bm25,
                      embedding_store, doc_store, avg_doc_length,
-                     index_reader=None, total_docs=0):
+                     index_reader=None, total_docs=0, graph_score=0.0):
     
     doc = doc_store.get(doc_id) or {}
     text = doc.get("text", "").lower()
@@ -107,7 +107,7 @@ def extract_features(query, query_tokens, doc_id, bm25_score, max_bm25,
         sum_tfidf, min_tfidf, max_tfidf, mean_tfidf, var_tfidf,
         norm_bm25, semantic_score,
         exact_phrase, window_match, bigram_match,
-        density, bool_match, first_pos, last_pos
+        density, bool_match, first_pos, last_pos, graph_score
     ]
     
     # Pad to 50
