@@ -28,6 +28,7 @@ from src.query.query_parser import parse_query
 from src.storage.index_reader import IndexReader
 from src.storage.document_store import DocumentStore
 from src.semantic.embedding_model import EmbeddingModel
+from src.semantic.embedding_store import EmbeddingStore
 from src.graph.retrieval import GraphRetriever
 from src.ranking.bm25 import BM25Ranker
 from src.ranking.ltr_features import extract_features
@@ -35,12 +36,12 @@ from src.utils.config import (
     METADATA_PATH,
     TITLE_INDEX_PATH,
     EMBEDDINGS_PATH,
+    INVERTED_INDEX_PATH as INDEX_PATH,
+    DOCUMENT_STORE_PATH as DOC_STORE_PATH,
+    LTR_MODEL_PATH as MODEL_OUTPUT,
 )
 
 # ─── Config ────────────────────────────────────────────────────────────────────
-INDEX_PATH      = "data/processed/inverted_index.json"
-DOC_STORE_PATH  = "data/processed/documents.json"
-MODEL_OUTPUT    = "models/ltr_model.pkl"
 
 # Sample of diverse India-specific training queries
 TRAINING_QUERIES = [
@@ -190,6 +191,7 @@ def main():
             "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 20),
             "n_estimators": trial.suggest_int("n_estimators", 50, 300),
             "verbose": -1,
+            "feature_pre_filter": False,
         }
 
         # Train with early stopping
@@ -219,6 +221,7 @@ def main():
         "metric": "ndcg",
         "ndcg_eval_at": [5, 10],
         "verbose": -1,
+        "feature_pre_filter": False,
     }
     final_params.update(best_params)
     
