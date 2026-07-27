@@ -281,7 +281,8 @@ class SearchEngine:
                     "document_title": ctx.get("document_title", doc.get("title", "")),
                 }
                 chunks.append(chunk)
-        return self.context_assembler.assemble(chunks, max_tokens=max_tokens)
+        self.context_assembler.max_tokens = max_tokens
+        return self.context_assembler.assemble(chunks)
 
     def explain_search(self, query: str, top_k: int = 10, agent_id: str = None) -> list:
         ranked = self.search(query, top_k=top_k, agent_id=agent_id)
