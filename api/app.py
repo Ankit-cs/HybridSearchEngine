@@ -51,6 +51,8 @@ import os
 
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
+from fastapi import Request
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -58,6 +60,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    process_time = (time.perf_counter() - start_time) * 1000
+    response.headers["X-Backend-Latency-MS"] = f"{process_time:.2f}"
+    return response
 
 app.include_router(search_router)
 app.include_router(agentic_router)
