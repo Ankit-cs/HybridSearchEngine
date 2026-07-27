@@ -622,6 +622,8 @@ A custom evaluation script tests the engine's MAP and NDCG@10 against a simulate
 
 ```bash
 python -m scripts.evaluate
+python -m scripts.build_index --source data/raw/simplewiki.xml
+python -m scripts.train_ltr
 ```
 
 *Expected Output (varies by dataset size):*

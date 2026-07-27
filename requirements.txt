@@ -33,3 +33,6 @@ dataclasses
 uuid6
 
 aiohttp
+pillow
+pypdf
+optuna
