@@ -4,6 +4,8 @@
 
 It combines classical information retrieval (BM25) with modern semantic search, an agentic AI layer, and a machine-learning ranker — designed as a **modular, extensible, and production-inspired system**.
 
+**Live Demo:** [https://astrasearchv1.vercel.app](https://astrasearchv1.vercel.app)
+
 ---
 
 ## Features
