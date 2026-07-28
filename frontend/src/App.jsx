@@ -14,7 +14,7 @@ function App() {
   const [searchTime, setSearchTime] = useState(null);
   const [profileData, setProfileData] = useState(null);
 
-  const API_BASE_URL = 'http://localhost:8000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
