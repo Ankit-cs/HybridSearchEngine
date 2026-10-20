@@ -618,21 +618,35 @@ logs/app.log
 
 ---
 
-## Evaluation
+## Modern Next.js Frontend (`frontend/`)
 
-A custom evaluation script tests the engine's MAP and NDCG@10 against a simulated ground-truth dataset.
+AstraSearch features a state-of-the-art **Next.js 16 (App Router + Turbopack)** client engineered for search and Knowledge Graph exploration:
+
+### Key Frontend Features
+- **Next.js 16 & Turbopack**: Blazing-fast development builds and SSR/Client boundary separation.
+- **Interactive Knowledge Graph Explorer**: 2D force-directed canvas powered by `react-force-graph-2d` connecting entities and relationships dynamically.
+- **Perplexity-Style AI Synthesis Box**: Inline citations mapping structured JSON evidence directly into interactive citation chips with live streaming states.
+- **Execution Profiling Breakdown**: Microsecond-latency visualizer tracking BM25, Dense Vector similarity, and Graph traversal times.
+- **Dark Mode Design System**: Custom HSL color tokens with Inter and JetBrains Mono typography for high-density information display.
+
+### Quickstart (Frontend)
 
 ```bash
-python -m scripts.evaluate
-python -m scripts.build_index --source data/raw/simplewiki.xml
-python -m scripts.train_ltr
+cd frontend
+npm install
+npm run dev
 ```
 
-*Expected Output (varies by dataset size):*
-- MAP: ~0.76
-- NDCG@10: ~0.88
+Open [http://localhost:3000](http://localhost:3000) to access the search interface.
+
+To build for production:
+```bash
+npm run build
+npm start
+```
 
 ---
 
 ## License
 MIT License
+
